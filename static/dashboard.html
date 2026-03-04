@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>행동 분석 대시보드</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+      --success: #22c55e;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: #020617; border-bottom: 1px solid var(--border);
+      padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    header a { color: var(--muted); text-decoration: none; font-size: 14px; }
+    header a:hover { color: var(--accent); }
+    main { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .filters {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; margin-bottom: 24px;
+    }
+    .filters label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .filters input, .filters select {
+      background: #020617; border: 1px solid var(--border); color: var(--text);
+      padding: 8px 10px; border-radius: 4px; min-width: 120px;
+    }
+    .filters button {
+      background: var(--accent); border: none; color: white; padding: 8px 16px;
+      border-radius: 6px; cursor: pointer; font-weight: 500;
+    }
+    .filters button.secondary { background: #334155; }
+    .section { margin-bottom: 32px; }
+    .section h2 { font-size: 16px; margin-bottom: 12px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 16px; margin-bottom: 12px;
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 12px; }
+    .chart-wrap { height: 280px; position: relative; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .tabs button {
+      background: none; border: none; color: var(--muted); padding: 10px 16px;
+      cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+    }
+    .tabs button:hover { color: var(--text); }
+    .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .empty-msg { color: var(--muted); padding: 24px; text-align: center; }
+    .meta { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    /* Plausible/GA 스타일 개요 */
+    .overview-kpis {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px; margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px; text-align: center;
+    }
+    .kpi-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+    .kpi-card .value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .kpi-card .value.accent { color: var(--accent); }
+    .overview-chart-wrap { height: 300px; margin-bottom: 24px; }
+    .overview-section-title { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
+    .top-pages-table { font-size: 14px; }
+    .top-pages-table td:first-child { max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 900px) {
+      .overview-grid-two { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+  <h1>행동 분석</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="adminLinks" style="display:none;">
+      <a href="/static/admin.html" class="btn-nav" style="display:inline-flex;align-items:center;padding:8px 16px;background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(59,130,246,0.4);" title="변수·트리거·태그 설정">← 컨테이너 관리</a>
+      <a href="/static/accounts.html" class="btn-nav" style="display:inline-flex;align-items:center;padding:8px 16px;margin-left:8px;background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(59,130,246,0.4);" title="계정 목록·가입 승인">👥 계정 관리</a>
+    </span>
+    <a href="#" id="btnKafkaUi" class="btn-nav" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;padding:8px 16px;margin-left:8px;background:linear-gradient(135deg, #0d9488 0%, #0f766e 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(13,148,136,0.4);transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(13,148,136,0.5)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(13,148,136,0.4)';" title="Kafka UI에서 test 토픽 메시지 보기">📋 Kafka UI (test 토픽)</a>
+    <button type="button" class="secondary" id="btnRefresh" style="padding:6px 12px;">새로고침</button>
+    <label style="margin-left:12px;color:var(--muted);font-size:12px;">
+      <input type="checkbox" id="autoRefresh"> 60초마다 자동 새로고침
+    </label>
+    <button type="button" class="secondary" id="btnLogout" style="padding:6px 12px;margin-left:8px;">로그아웃</button>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <div>
+      <label>기간</label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="date" id="dateFrom" />
+        <span style="color:var(--muted);">~</span>
+        <input type="date" id="dateTo" />
+        <button type="button" class="secondary" id="preset7" style="padding:6px 10px;font-size:12px;">7일</button>
+        <button type="button" class="secondary" id="preset30" style="padding:6px 10px;font-size:12px;">30일</button>
+        <button type="button" class="secondary" id="preset90" style="padding:6px 10px;font-size:12px;">90일</button>
+      </div>
+    </div>
+    <div>
+      <label>집계 기준 (페이지 이벤트)</label>
+      <select id="groupBy">
+        <option value="page_id">페이지(page_id)</option>
+        <option value="stat_date">일자</option>
+        <option value="act_type">행동 유형(act_type)</option>
+        <option value="event_trigger">트리거</option>
+        <option value="channel">채널</option>
+      </select>
+    </div>
+    <div>
+      <label>필터: page_id</label>
+      <input type="text" id="filterPageId" placeholder="부분 일치" />
+    </div>
+    <div>
+      <label>필터: channel</label>
+      <select id="filterChannel">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div>
+      <label>필터: act_type</label>
+      <input type="text" id="filterActType" placeholder="pageview, click 등" />
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button type="button" id="btnApply">적용</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button type="button" data-tab="overview" class="active">개요</button>
+    <button type="button" data-tab="page_events">페이지 이벤트</button>
+    <button type="button" data-tab="funnel">퍼널</button>
+    <button type="button" data-tab="heatmap">히트맵</button>
+  </div>
+
+  <div id="tab-overview" class="tab-panel active">
+    <div class="section">
+      <h2>개요</h2>
+      <div class="overview-kpis">
+        <div class="kpi-card">
+          <div class="label">총 페이지뷰</div>
+          <div class="value accent" id="overviewPageviews">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">총 이벤트</div>
+          <div class="value" id="overviewEvents">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">방문자수</div>
+          <div class="value" id="overviewVisitors">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">총 방문 횟수</div>
+          <div class="value" id="overviewVisits">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">방문당 조회수</div>
+          <div class="value" id="overviewPagesPerVisit">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">이탈률</div>
+          <div class="value" id="overviewBounceRate">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">평균 방문 기간</div>
+          <div class="value" style="font-size:18px;" id="overviewVisitDuration">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="label">기간</div>
+          <div class="value" style="font-size:14px;" id="overviewPeriod">-</div>
+        </div>
+      </div>
+      <div class="overview-section-title">이벤트 추이 (일별)</div>
+      <div class="card">
+        <div class="overview-chart-wrap"><canvas id="chartOverview"></canvas></div>
+      </div>
+      <div class="overview-grid-two" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;">
+        <div>
+          <div class="overview-section-title">인기 페이지 (페이지뷰)</div>
+          <div class="card table-wrap">
+            <table class="top-pages-table">
+              <thead><tr><th>페이지</th><th>페이지뷰</th></tr></thead>
+              <tbody id="tbodyTopPages"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <div class="overview-section-title">이벤트 유형별</div>
+          <div class="card table-wrap">
+            <table class="top-pages-table">
+              <thead><tr><th>유형</th><th>건수</th></tr></thead>
+              <tbody id="tbodyByType"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-page_events" class="tab-panel">
+    <div class="section">
+      <h2>페이지별 이벤트 집계</h2>
+      <div class="card">
+        <div class="chart-wrap"><canvas id="chartPageEvents"></canvas></div>
+        <p class="meta" id="metaPageEvents"></p>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr id="theadPageEvents"></tr></thead>
+          <tbody id="tbodyPageEvents"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-funnel" class="tab-panel">
+    <div class="section">
+      <h2>퍼널 단계별 이탈률</h2>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+        <label style="color:var(--muted);font-size:12px;">퍼널 선택 </label>
+        <select id="funnelSelect"></select>
+        <button type="button" class="secondary" id="btnFunnelAgg" style="padding:6px 12px;">퍼널 집계 실행 (어제·오늘)</button>
+      </div>
+      <div class="card">
+        <div class="chart-wrap"><canvas id="chartFunnel"></canvas></div>
+        <p class="meta" id="metaFunnel"></p>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr><th>퍼널ID</th><th>일자</th><th>단계</th><th>단계명</th><th>진입</th><th>완료</th><th>이탈</th><th>이탈률(%)</th></tr></thead>
+          <tbody id="tbodyFunnel"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-heatmap" class="tab-panel">
+    <div class="section">
+      <h2>스크롤·인터랙션 히트맵 요약</h2>
+      <div>
+        <label style="color:var(--muted);font-size:12px;">유형 </label>
+        <select id="heatmapType">
+          <option value="">전체</option>
+          <option value="scroll">스크롤</option>
+          <option value="click">클릭</option>
+        </select>
+      </div>
+      <div class="card">
+        <div class="chart-wrap"><canvas id="chartHeatmap"></canvas></div>
+        <p class="meta" id="metaHeatmap"></p>
+      </div>
+      <div class="card table-wrap">
+        <table>
+          <thead><tr><th>일자</th><th>페이지</th><th>채널</th><th>유형</th><th>세그먼트</th><th>건수</th></tr></thead>
+          <tbody id="tbodyHeatmap"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+(function() {
+  const API = "/api";
+  let overviewChart = null, pageEventsChart = null, funnelChart = null, heatmapChart = null;
+  let autoRefreshTimer = null;
+
+  function getFilters() {
+    const today = new Date().toISOString().slice(0, 10);
+    const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const channelEl = document.getElementById("filterChannel");
+    const channelVal = channelEl && channelEl.value ? channelEl.value.trim() : "";
+    return {
+      date_from: document.getElementById("dateFrom").value || defaultFrom,
+      date_to: document.getElementById("dateTo").value || today,
+      group_by: document.getElementById("groupBy").value || "page_id",
+      page_id: document.getElementById("filterPageId").value.trim() || undefined,
+      channel: channelVal || undefined,
+      act_type: document.getElementById("filterActType").value.trim() || undefined
+    };
+  }
+
+  async function loadChannelOptions() {
+    const today = new Date().toISOString().slice(0, 10);
+    const defaultFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const dateFrom = document.getElementById("dateFrom").value || defaultFrom;
+    const dateTo = document.getElementById("dateTo").value || today;
+    const sel = document.getElementById("filterChannel");
+    if (!sel) return;
+    const currentVal = sel.value;
+    try {
+      const res = await fetch(API + "/dashboard/channels?" + qs({ date_from: dateFrom, date_to: dateTo }), authHeaders());
+      if (!res.ok) return;
+      const json = await res.json();
+      const channels = json.data || [];
+      sel.innerHTML = "<option value=''>전체</option>" + channels.map(function(c) {
+        return "<option value='" + escapeHtml(String(c)) + "'>" + escapeHtml(String(c)) + "</option>";
+      }).join("");
+      if (currentVal && channels.indexOf(currentVal) !== -1) sel.value = currentVal;
+    } catch (_) {}
+  }
+
+  function authHeaders() {
+    return { credentials: "include" };
+  }
+
+  function qs(params) {
+    var p = {};
+    Object.keys(params || {}).forEach(function(k) {
+      var v = params[k];
+      if (v === undefined || v === null || v === "" || v === "undefined" || v === "null") return;
+      p[k] = v;
+    });
+    return new URLSearchParams(p).toString();
+  }
+
+  async function fetchPageEvents() {
+    const f = getFilters();
+    const res = await fetch(API + "/dashboard/page_events?" + qs({
+      date_from: f.date_from, date_to: f.date_to, group_by: f.group_by,
+      page_id: f.page_id, channel: f.channel, act_type: f.act_type, limit: 100
+    }), authHeaders());
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function fetchFunnelDaily() {
+    const f = getFilters();
+    const funnelId = document.getElementById("funnelSelect").value;
+    const params = { date_from: f.date_from, date_to: f.date_to };
+    if (funnelId && funnelId !== "undefined" && funnelId !== "null") params.funnel_id = funnelId;
+    const res = await fetch(API + "/dashboard/funnel_daily?" + qs(params), authHeaders());
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function fetchFunnels() {
+    const res = await fetch(API + "/dashboard/funnels", authHeaders());
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function fetchHeatmap() {
+    const f = getFilters();
+    const heatmapType = document.getElementById("heatmapType").value || undefined;
+    const res = await fetch(API + "/dashboard/heatmap?" + qs({
+      date_from: f.date_from, date_to: f.date_to, page_id: f.page_id,
+      heatmap_type: heatmapType, channel: f.channel, limit: 200
+    }), authHeaders());
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  async function fetchOverview() {
+    const f = getFilters();
+    const [byDate, byDatePv, byPage, byType, statsRes] = await Promise.all([
+      fetch(API + "/dashboard/page_events?" + qs({
+        date_from: f.date_from, date_to: f.date_to, group_by: "stat_date", limit: 365
+      }), authHeaders()).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(API + "/dashboard/page_events?" + qs({
+        date_from: f.date_from, date_to: f.date_to, group_by: "stat_date", act_type: "pageview", limit: 365
+      }), authHeaders()).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(API + "/dashboard/page_events?" + qs({
+        date_from: f.date_from, date_to: f.date_to, group_by: "page_id", act_type: "pageview", limit: 15
+      }), authHeaders()).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(API + "/dashboard/page_events?" + qs({
+        date_from: f.date_from, date_to: f.date_to, group_by: "act_type", limit: 20
+      }), authHeaders()).then(r => r.ok ? r.json() : { data: [] }),
+      fetch(API + "/dashboard/overview_stats?" + qs({
+        date_from: f.date_from,
+        date_to: f.date_to,
+        page_id: f.page_id,
+        channel: f.channel
+      }), authHeaders()).then(r => r.ok ? r.json() : { data: {} })
+    ]);
+    return {
+      byDate: (byDate.data || []),
+      byDatePv: (byDatePv.data || []),
+      byPage: (byPage.data || []),
+      byType: (byType.data || []),
+      stats: statsRes.data || {},
+      dateFrom: f.date_from,
+      dateTo: f.date_to
+    };
+  }
+
+  function renderOverview(data) {
+    const byDate = data.byDate || [];
+    const byDatePv = data.byDatePv || [];
+    const byPage = data.byPage || [];
+    const byType = data.byType || [];
+    const totalEvents = byDate.reduce(function(sum, r) { return sum + (Number(r.total) || 0); }, 0);
+    const totalPageviews = byDatePv.reduce(function(sum, r) { return sum + (Number(r.total) || 0); }, 0);
+    const stats = data.stats || {};
+    const visitors = Number(stats.visitors || 0);
+    const visits = Number(stats.visits || 0);
+    const totalPageviewsFromStats = stats.total_pageviews != null ? Number(stats.total_pageviews) : totalPageviews;
+    const totalEventsFromStats = stats.total_events != null ? Number(stats.total_events) : totalEvents;
+    const pagesPerVisit = stats.pages_per_visit != null ? Number(stats.pages_per_visit) : (visits > 0 ? totalPageviewsFromStats / visits : 0);
+    const bounceRate = stats.bounce_rate != null ? Number(stats.bounce_rate) : null;
+    const avgDurationMs = stats.avg_duration_ms != null ? Number(stats.avg_duration_ms) : null;
+
+    document.getElementById("overviewPageviews").textContent = totalPageviewsFromStats.toLocaleString();
+    document.getElementById("overviewEvents").textContent = totalEventsFromStats.toLocaleString();
+    document.getElementById("overviewVisitors").textContent = visitors.toLocaleString();
+    document.getElementById("overviewVisits").textContent = visits.toLocaleString();
+    document.getElementById("overviewPagesPerVisit").textContent =
+      (visits > 0 && pagesPerVisit >= 0) ? pagesPerVisit.toFixed(2) : "-";
+    document.getElementById("overviewBounceRate").textContent =
+      bounceRate != null ? bounceRate.toFixed(1) + "%" : "-";
+    document.getElementById("overviewVisitDuration").textContent =
+      formatDuration(avgDurationMs);
+    document.getElementById("overviewPeriod").textContent = (data.dateFrom || "") + " ~ " + (data.dateTo || "");
+
+    var tbodyType = document.getElementById("tbodyByType");
+    if (tbodyType) {
+      tbodyType.innerHTML = byType.length === 0
+        ? "<tr><td colspan='2' class='empty-msg'>데이터 없음</td></tr>"
+        : byType.map(function(r) {
+            var typ = (r.act_type != null ? String(r.act_type) : "").trim() || "(없음)";
+            return "<tr><td>" + escapeHtml(typ) + "</td><td>" + (Number(r.total) || 0).toLocaleString() + "</td></tr>";
+          }).join("");
+    }
+
+    const tbody = document.getElementById("tbodyTopPages");
+    tbody.innerHTML = byPage.length === 0
+      ? "<tr><td colspan='2' class='empty-msg'>데이터 없음</td></tr>"
+      : byPage.map(function(r) {
+          var page = (r.page_id != null ? String(r.page_id) : "").trim() || "(없음)";
+          return "<tr><td title='" + escapeHtml(page) + "'>" + escapeHtml(page.slice(0, 60)) + (page.length > 60 ? "…" : "") + "</td><td>" + (Number(r.total) || 0).toLocaleString() + "</td></tr>";
+        }).join("");
+
+    if (overviewChart) overviewChart.destroy();
+    const ctx = document.getElementById("chartOverview");
+    if (!ctx) return;
+    const labels = byDate.map(function(r) { return r.stat_date || ""; });
+    const values = byDate.map(function(r) { return Number(r.total) || 0; });
+    overviewChart = new Chart(ctx.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [{ label: "이벤트 수", data: values, borderColor: "rgb(59, 130, 246)", backgroundColor: "rgba(59, 130, 246, 0.1)", fill: true, tension: 0.2 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "var(--muted)", maxTicksLimit: 12 } },
+          y: { beginAtZero: true, grid: { color: "rgba(255,255,255,0.06)" }, ticks: { color: "var(--muted)" } }
+        }
+      }
+    });
+  }
+
+  function renderPageEvents(data) {
+    const rows = data.data || [];
+    const groupBy = data.meta?.group_by || "page_id";
+    const keyName = groupBy === "stat_date" ? "stat_date" : groupBy;
+    document.getElementById("metaPageEvents").textContent =
+      "기간: " + (data.meta?.date_from || "") + " ~ " + (data.meta?.date_to || "") + " | 집계: " + keyName;
+
+    const thead = document.getElementById("theadPageEvents");
+    thead.innerHTML = "<th>" + keyName + "</th><th>총 이벤트 수</th>";
+    const tbody = document.getElementById("tbodyPageEvents");
+    tbody.innerHTML = rows.length === 0
+      ? "<tr><td colspan='2' class='empty-msg'>데이터 없음</td></tr>"
+      : rows.map(r => "<tr><td>" + escapeHtml(String(r[keyName] ?? "")) + "</td><td>" + (r.total ?? 0) + "</td></tr>").join("");
+
+    if (pageEventsChart) pageEventsChart.destroy();
+    const ctx = document.getElementById("chartPageEvents").getContext("2d");
+    const labels = rows.slice(0, 20).map(r => String(r[keyName] ?? "").slice(0, 30));
+    const values = rows.slice(0, 20).map(r => Number(r.total) || 0);
+    pageEventsChart = new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "이벤트 수", data: values, backgroundColor: "rgba(59,130,246,0.6)" }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  function renderFunnel(data) {
+    const rows = data.data || [];
+    document.getElementById("metaFunnel").textContent =
+      "기간: " + (data.meta?.date_from || "") + " ~ " + (data.meta?.date_to || "");
+
+    const tbody = document.getElementById("tbodyFunnel");
+    tbody.innerHTML = rows.length === 0
+      ? "<tr><td colspan='8' class='empty-msg'>데이터 없음 (퍼널 집계 배치 실행 후 표시됩니다)</td></tr>"
+      : rows.map(r => "<tr><td>" + r.funnel_id + "</td><td>" + (r.stat_date || "") + "</td><td>" + r.step_order + "</td><td>" + escapeHtml(r.step_name || "") + "</td><td>" + r.users_entered + "</td><td>" + r.users_completed + "</td><td>" + (r.users_dropped || 0) + "</td><td>" + (r.drop_off_rate != null ? Number(r.drop_off_rate).toFixed(2) : "-") + "</td></tr>").join("");
+
+    const byFunnel = {};
+    rows.forEach(r => {
+      const k = r.funnel_id + "_" + (r.stat_date || "");
+      if (!byFunnel[k]) byFunnel[k] = [];
+      byFunnel[k].push(r);
+    });
+    const first = Object.values(byFunnel)[0];
+    if (funnelChart) funnelChart.destroy();
+    const ctx = document.getElementById("chartFunnel").getContext("2d");
+    if (!first || first.length === 0) {
+      funnelChart = new Chart(ctx, { type: "bar", data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false } });
+      return;
+    }
+    const labels = first.map(r => r.step_name || "Step" + r.step_order);
+    const entered = first.map(r => Number(r.users_entered) || 0);
+    const dropped = first.map(r => Number(r.users_dropped) || 0);
+    funnelChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "진입", data: entered, backgroundColor: "rgba(59,130,246,0.6)" },
+          { label: "이탈", data: dropped, backgroundColor: "rgba(239,68,68,0.6)" }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+  }
+
+  function renderHeatmap(data) {
+    const rows = data.data || [];
+    document.getElementById("metaHeatmap").textContent =
+      "기간: " + (data.meta?.date_from || "") + " ~ " + (data.meta?.date_to || "");
+
+    const tbody = document.getElementById("tbodyHeatmap");
+    tbody.innerHTML = rows.length === 0
+      ? "<tr><td colspan='6' class='empty-msg'>데이터 없음</td></tr>"
+      : rows.map(r => "<tr><td>" + (r.stat_date || "") + "</td><td>" + escapeHtml((r.page_id || "").slice(0, 50)) + "</td><td>" + (r.channel || "") + "</td><td>" + (r.heatmap_type || "") + "</td><td>" + escapeHtml((r.segment_key || "").slice(0, 40)) + "</td><td>" + (r.event_count || 0) + "</td></tr>").join("");
+
+    if (heatmapChart) heatmapChart.destroy();
+    heatmapChart = null;
+    const ctx = document.getElementById("chartHeatmap").getContext("2d");
+    const slice = rows.slice(0, 25);
+    const labels = slice.map(r => {
+      const seg = (r.segment_key != null ? String(r.segment_key) : "").slice(0, 25);
+      const page = (r.page_id != null ? String(r.page_id) : "").slice(0, 18);
+      return page ? seg + " @ " + page : seg || "(없음)";
+    });
+    const values = slice.map(r => Number(r.event_count) || 0);
+    heatmapChart = new Chart(ctx, {
+      type: "bar",
+      data: { labels, datasets: [{ label: "건수", data: values, backgroundColor: "rgba(34,197,94,0.6)" }] },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true },
+          y: { ticks: { maxRotation: 0, autoSkip: false, font: { size: 11 } } }
+        }
+      }
+    });
+    // 히트맵 탭이 현재 보이면 한 번 리사이즈 (다른 탭이 기본일 때 나중에 탭 전환 시에도 resize 호출됨)
+    if (document.getElementById("tab-heatmap").classList.contains("active") && heatmapChart) {
+      setTimeout(function() { heatmapChart.resize(); }, 100);
+    }
+  }
+
+  function escapeHtml(s) {
+    const div = document.createElement("div");
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function formatDuration(ms) {
+    if (!ms || isNaN(ms) || ms <= 0) return "-";
+    const totalSeconds = Math.round(ms / 1000);
+    if (totalSeconds < 60) return totalSeconds + "초";
+    const totalMinutes = Math.round(totalSeconds / 60);
+    if (totalMinutes < 60) return totalMinutes + "분";
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours + "시간 " + (minutes > 0 ? minutes + "분" : "");
+  }
+
+  async function loadAll() {
+    try {
+      const [ov, pe, fd, hm] = await Promise.all([
+        fetchOverview(),
+        fetchPageEvents(),
+        fetchFunnelDaily(),
+        fetchHeatmap()
+      ]);
+      renderOverview(ov);
+      renderPageEvents(pe);
+      renderFunnel(fd);
+      renderHeatmap(hm);
+    } catch (e) {
+      if (e.message && (e.message.includes("401") || e.message.includes("로그인"))) {
+        window.location.href = "/";
+        return;
+      }
+      console.error(e);
+      alert("데이터 로드 실패: " + (e.message || String(e)));
+    }
+  }
+
+  async function initFunnelSelect() {
+    try {
+      const r = await fetchFunnels();
+      const list = r.data || [];
+      const sel = document.getElementById("funnelSelect");
+      sel.innerHTML = "<option value=''>전체 퍼널</option>" + list.map(f => "<option value='" + f.id + "'>" + escapeHtml(f.funnel_name || f.funnel_code) + "</option>").join("");
+    } catch (_) {}
+  }
+
+  function setDefaultDates() {
+    const t = new Date();
+    const to = t.toISOString().slice(0, 10);
+    const from = new Date(t - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    document.getElementById("dateFrom").value = from;
+    document.getElementById("dateTo").value = to;
+  }
+
+  document.getElementById("btnApply").addEventListener("click", function() { loadChannelOptions().then(loadAll); });
+  document.getElementById("btnRefresh").addEventListener("click", function() { loadChannelOptions().then(loadAll); });
+  document.getElementById("btnLogout").addEventListener("click", function() {
+    fetch("/api/logout", { method: "POST", credentials: "include" }).then(function() { window.location.href = "/"; });
+  });
+  document.getElementById("autoRefresh").addEventListener("change", function() {
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    if (this.checked) autoRefreshTimer = setInterval(loadAll, 60000);
+  });
+  document.querySelectorAll(".tabs button").forEach(btn => {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".tabs button").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      this.classList.add("active");
+      const panel = document.getElementById("tab-" + this.dataset.tab);
+      panel.classList.add("active");
+      // 숨겨진 탭에서 그려진 차트는 크기가 0이 되므로, 탭 표시 후 리사이즈
+      setTimeout(function() {
+        if (overviewChart) overviewChart.resize();
+        if (pageEventsChart) pageEventsChart.resize();
+        if (funnelChart) funnelChart.resize();
+        if (heatmapChart) heatmapChart.resize();
+      }, 50);
+    });
+  });
+  document.getElementById("funnelSelect").addEventListener("change", loadAll);
+  document.getElementById("heatmapType").addEventListener("change", loadAll);
+  document.getElementById("btnFunnelAgg").addEventListener("click", async function() {
+    try {
+      const res = await fetch(API + "/dashboard/funnel_agg", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include", body: "{}" });
+      const j = await res.json();
+      if (j.ok) alert(j.message || "완료"); else alert(j.detail || "실패");
+      loadAll();
+    } catch (e) { alert("실패: " + (e.message || e)); }
+  });
+
+  setDefaultDates();
+  function setPreset(days) {
+    var end = new Date();
+    var start = new Date(end);
+    start.setDate(start.getDate() - (days - 1));
+    document.getElementById("dateFrom").value = start.toISOString().slice(0, 10);
+    document.getElementById("dateTo").value = end.toISOString().slice(0, 10);
+    loadChannelOptions().then(loadAll);
+  }
+  document.getElementById("preset7").addEventListener("click", function() { setPreset(7); });
+  document.getElementById("preset30").addEventListener("click", function() { setPreset(30); });
+  document.getElementById("preset90").addEventListener("click", function() { setPreset(90); });
+  (async function checkRole() {
+    try {
+      const r = await fetch("/api/check-auth", { credentials: "include" });
+      const d = await r.json();
+      if (!d.authenticated) { window.location.href = "/"; return; }
+      if (d.role === "admin") document.getElementById("adminLinks").style.display = "";
+    } catch (_) { window.location.href = "/"; }
+  })();
+  initFunnelSelect().then(loadChannelOptions).then(loadAll);
+
+  (function setKafkaUiLink() {
+    var el = document.getElementById('btnKafkaUi');
+    if (el) {
+      var base = window.location.protocol + '//' + window.location.hostname + ':18080';
+      el.href = base + '/ui/clusters/local/topics/test';
+    }
+  })();
+})();
+</script>
+</body>
+</html>

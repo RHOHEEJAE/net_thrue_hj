@@ -1,0 +1,136 @@
+{
+  "version": "20260223_013350",
+  "comment": "테스트 삭제1",
+  "deployed_at": "2026-02-23T01:33:50.113585Z",
+  "deployed_by_name": "노희재",
+  "deployed_by_affiliation": "데이터엔지니어링팀",
+  "variables": [
+    "class_name",
+    "click_text",
+    "prd_brand",
+    "prd_code",
+    "srch_kwd",
+    "tab_name",
+    "tag",
+    "tes",
+    "test",
+    "test12"
+  ],
+  "triggers": {
+    "CLICK_EVENT": {
+      "type": "dom_event",
+      "event": "click",
+      "capture": true
+    },
+    "DOM_READY": {
+      "type": "immediate"
+    }
+  },
+  "tags": [
+    {
+      "tag_code": "PV_DETAIL",
+      "trigger_code": "DOM_READY",
+      "exec_order": 10,
+      "func_js": "function trackerFunc(send) {\n  return function () {\n    let prd_brand = '';\n    let prd_code = '';\n    let tab_name = '';\n    let srch_kwd = '';\n\n    if (\n      location.pathname.match('product/detail') &&\n      document.querySelector('.prod-item__display-name')\n    ) {\n      const prdel = document.querySelector('.prod-item__display-name').parentElement;\n      prd_brand = prdel.querySelector('div > p')?.innerText || '';\n      prd_code = location.href.split('/').pop();\n\n    } else if (\n      location.pathname.match('/search') &&\n      document.querySelector('.search-result__tab')\n    ) {\n      tab_name =\n        document.querySelector('button > div.is-selected > span')?.innerText || '';\n\n      const inputEl = document.querySelector('.search-header__input');\n      srch_kwd = inputEl?.value || inputEl?.placeholder || '';\n    }\n\n    setTimeout(() => {\n      send({\n        tag_code: \"PV_DETAIL\",\n        event_type: \"pageview\",\n        prd_code,\n        prd_brand,\n        tab_name,\n        srch_kwd\n      });\n    }, 300);\n  }\n}"
+    },
+    {
+      "tag_code": "COMMON_CLICK",
+      "trigger_code": "CLICK_EVENT",
+      "exec_order": 20,
+      "func_js": "function trackerFunc(send) {\n  return function (e) {\n    const el = e.target.closest(\n      \"a, button, li, div, span, svg, [role=button]\"\n    );\n    if (!el) return;\n\n    send({\n      tag_code: \"COMMON_CLICK\",\n      event_type: \"click\",\n      click_text: el.innerText?.trim().slice(0, 30) || '',\n      class_name: el.className || '',\n      tag: el.tagName\n    });\n  }\n}"
+    }
+  ],
+  "variables_full": [
+    {
+      "variable_code": "class_name",
+      "variable_name": "클래스명",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "click_text",
+      "variable_name": "클릭 텍스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "prd_brand",
+      "variable_name": "상품 브랜드",
+      "enabled": true
+    },
+    {
+      "variable_code": "prd_code",
+      "variable_name": "상품 코드",
+      "enabled": true
+    },
+    {
+      "variable_code": "srch_kwd",
+      "variable_name": "검색어",
+      "enabled": true
+    },
+    {
+      "variable_code": "tab_name",
+      "variable_name": "탭 이름",
+      "enabled": true
+    },
+    {
+      "variable_code": "tag",
+      "variable_name": "태그명",
+      "enabled": true
+    },
+    {
+      "variable_code": "tes",
+      "variable_name": "테스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "test",
+      "variable_name": "테스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "test12",
+      "variable_name": "테스트",
+      "enabled": true
+    }
+  ],
+  "triggers_full": [
+    {
+      "trigger_code": "CLICK_EVENT",
+      "trigger_name": "클릭 이벤트",
+      "event_type": "click",
+      "enabled": true
+    },
+    {
+      "trigger_code": "DOM_READY",
+      "trigger_name": "DOM 로드 완료 시",
+      "event_type": "dom_ready",
+      "enabled": true
+    }
+  ],
+  "tags_full": [
+    {
+      "tag_code": "COMMON_CLICK",
+      "tag_name": "공통 클릭",
+      "trigger_code": "CLICK_EVENT",
+      "event_type": "click",
+      "exec_order": 20,
+      "func_js": "function trackerFunc(send) {\n  return function (e) {\n    const el = e.target.closest(\n      \"a, button, li, div, span, svg, [role=button]\"\n    );\n    if (!el) return;\n\n    send({\n      tag_code: \"COMMON_CLICK\",\n      event_type: \"click\",\n      click_text: el.innerText?.trim().slice(0, 30) || '',\n      class_name: el.className || '',\n      tag: el.tagName\n    });\n  }\n}",
+      "enabled": true,
+      "created_at": "2026-01-26 08:06:21.420"
+    },
+    {
+      "tag_code": "PV_DETAIL",
+      "tag_name": "페이지 상세 PV",
+      "trigger_code": "DOM_READY",
+      "event_type": "pageview",
+      "exec_order": 10,
+      "func_js": "function trackerFunc(send) {\n  return function () {\n    let prd_brand = '';\n    let prd_code = '';\n    let tab_name = '';\n    let srch_kwd = '';\n\n    if (\n      location.pathname.match('product/detail') &&\n      document.querySelector('.prod-item__display-name')\n    ) {\n      const prdel = document.querySelector('.prod-item__display-name').parentElement;\n      prd_brand = prdel.querySelector('div > p')?.innerText || '';\n      prd_code = location.href.split('/').pop();\n\n    } else if (\n      location.pathname.match('/search') &&\n      document.querySelector('.search-result__tab')\n    ) {\n      tab_name =\n        document.querySelector('button > div.is-selected > span')?.innerText || '';\n\n      const inputEl = document.querySelector('.search-header__input');\n      srch_kwd = inputEl?.value || inputEl?.placeholder || '';\n    }\n\n    setTimeout(() => {\n      send({\n        tag_code: \"PV_DETAIL\",\n        event_type: \"pageview\",\n        prd_code,\n        prd_brand,\n        tab_name,\n        srch_kwd\n      });\n    }, 300);\n  }\n}",
+      "enabled": true,
+      "created_at": "2026-01-26 08:06:21.420"
+    }
+  ]
+}

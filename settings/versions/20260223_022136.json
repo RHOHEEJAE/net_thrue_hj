@@ -1,0 +1,515 @@
+{
+  "version": "20260223_022136",
+  "comment": "변수1",
+  "deployed_at": "2026-02-23T02:21:36.464916Z",
+  "deployed_by_name": "노희재",
+  "deployed_by_affiliation": "데이터엔지니어링팀",
+  "variables": [
+    "class_name",
+    "click_text",
+    "prd_brand",
+    "prd_code",
+    "srch_kwd",
+    "tab_name",
+    "tag",
+    "tes",
+    "test",
+    "test12",
+    "page_id",
+    "exh_name",
+    "scroll_rate",
+    "swipe_direct",
+    "swipe_area",
+    "channel",
+    "TO_os",
+    "TO_sdk",
+    "click_type",
+    "area_type",
+    "exh_id",
+    "AL_popup",
+    "TO_has_a",
+    "prd_name",
+    "prd_is_ad",
+    "rank",
+    "kwd_ctgr",
+    "exh_text",
+    "AL_url",
+    "AL_likeBtn_arr",
+    "card_id",
+    "AApay_money",
+    "AApay_point",
+    "AApay_cnt",
+    "FC_nthReplace",
+    "el_order",
+    "module_id",
+    "module_order",
+    "act_type",
+    "banner_position",
+    "AL_modules"
+  ],
+  "triggers": {
+    "CLICK_EVENT": {
+      "conditions": [],
+      "type": "dom_event",
+      "event": "click",
+      "capture": true
+    },
+    "DOM_READY": {
+      "conditions": [],
+      "type": "immediate"
+    }
+  },
+  "tags": [
+    {
+      "tag_code": "PV_DETAIL",
+      "trigger_code": "DOM_READY",
+      "exec_order": 10,
+      "func_js": "function trackerFunc(send) {\n  return function () {\n    let prd_brand = '';\n    let prd_code = '';\n    let tab_name = '';\n    let srch_kwd = '';\n\n    if (\n      location.pathname.match('product/detail') &&\n      document.querySelector('.prod-item__display-name')\n    ) {\n      const prdel = document.querySelector('.prod-item__display-name').parentElement;\n      prd_brand = prdel.querySelector('div > p')?.innerText || '';\n      prd_code = location.href.split('/').pop();\n\n    } else if (\n      location.pathname.match('/search') &&\n      document.querySelector('.search-result__tab')\n    ) {\n      tab_name =\n        document.querySelector('button > div.is-selected > span')?.innerText || '';\n\n      const inputEl = document.querySelector('.search-header__input');\n      srch_kwd = inputEl?.value || inputEl?.placeholder || '';\n    }\n\n    setTimeout(() => {\n      send({\n        tag_code: \"PV_DETAIL\",\n        event_type: \"pageview\",\n        prd_code,\n        prd_brand,\n        tab_name,\n        srch_kwd\n      });\n    }, 300);\n  }\n}",
+      "run_conditions": [],
+      "run_condition_any": false,
+      "except_conditions": []
+    },
+    {
+      "tag_code": "COMMON_CLICK",
+      "trigger_code": "CLICK_EVENT",
+      "exec_order": 20,
+      "func_js": "function trackerFunc(send) {\n  return function (e) {\n    const el = e.target.closest(\n      \"a, button, li, div, span, svg, [role=button]\"\n    );\n    if (!el) return;\n\n    send({\n      tag_code: \"COMMON_CLICK\",\n      event_type: \"click\",\n      click_text: el.innerText?.trim().slice(0, 30) || '',\n      class_name: el.className || '',\n      tag: el.tagName\n    });\n  }\n}",
+      "run_conditions": [],
+      "run_condition_any": false,
+      "except_conditions": []
+    }
+  ],
+  "variables_full": [
+    {
+      "variable_code": "class_name",
+      "variable_name": "class_name",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "click_text",
+      "variable_name": "click_text",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "prd_brand",
+      "variable_name": "prd_brand",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "prd_code",
+      "variable_name": "prd_code",
+      "enabled": true,
+      "description": "클릭/로드 상품코드\n경로에 있는 code 추출",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    let el = {{clickElement}};\n    const likes = {{AL_likeBtn_arr}};\n    if (el && likes.some(cls => el.classList.contains(cls))) {\n      el = el.closest('a') || null;\n    }\n    const cd = {{customData}};\n \n    let code = '';\n    if (cd && cd.act_type === 'pageview' && cd.prd_code) {\n        code = cd.prd_code;\n    } else if (el) {\n    // CLICK\n    let href = '';\n    if (el.tagName.toLowerCase() === 'a') {\n       href = el.href;\n    } else {\n       href = {{url}};\n    }\n    const word = \"/product/detail/\";\n    let startIdx = href.indexOf(word);\n    if (startIdx > 0) {\n      startIdx = startIdx + word.length;\n      code = href.substring(startIdx);\n    }\n    if (code && el.closest('.store-profile__util')){\n      return code.split('?')[0];\n    }else if (location.pathname.match('product/detail') && el.closest('.store-profile__link')){\n        code = location.pathname.match('product/detail/(.+)')[1];\n    }\n   } else if (!el && location.pathname.match('product/detail')){\n     code = location.pathname.match('/product/detail/(.+)')[1];\n   }\n\n   if (location.pathname.match('(order/cart|order/payment)') && document.querySelector('div[data-goods-id],li[data-order-goodsid]')){\n     if (el && el.closest('div[data-goods-id]')) code = el.closest('div[data-goods-id]').dataset.goodsId;\n     else if ( !el || (el && el.matches('.cart-selected-goods__total-button, .order-payment__payment-button'))){\n       var codes = [];\n       if(document.querySelector('div[data-goods-id]')){\n         var goods = document.querySelectorAll('div[data-goods-id]');\n          goods.forEach((e) => {codes.push(e.dataset.goodsId);});\n          code = codes.join('___');\n       }else if(document.querySelector('li[data-order-goodsid]')){\n         var goods = document.querySelectorAll('li[data-order-goodsid]');\n          goods.forEach((e) => {codes.push(e.dataset.orderGoodsid);});\n          code = codes.join('___');\n       }\n     }\n   }else if (location.pathname.match('(favorite|recentGoods)')){\n     var codes = [];\n     if (!el && document.querySelector('a.recent-goods-item-button')){\n       var goods = document.querySelectorAll('a.recent-goods-item-button');\n       goods.forEach((e) => {\n         var url = e.href && e.href.split('/');\n         if (url && url.includes('detail')){\n           codes.push(url[url.length -1]);\n         }\n       });\n       \n       code = codes.join('___');\n     }else if(el && el.closest('a.recent-goods-item-button')){\n       var url = el.closest('a.recent-goods-item-button').href && el.closest('a.recent-goods-item-button').href.split('/');\n       code = url[url.length -1];\n     }\n   }else if (location.pathname.match('reviewerProfile') && el && el.closest('[data-goods-id]')){\n     code = el.closest('[data-goods-id]').dataset.goodsId;\n   }\n\n   if (el && !code && el.closest('.review-recomm-item') && el.querySelector('[data-product-item-id]')){\n       code = el.querySelector('[data-product-item-id]').dataset.productItemId;\n   }else if (el && !code && el.closest('.common-review-goods-container, .common-review-item-container') && el.closest('[data-goods-id]')){\n       code = el.closest('[data-goods-id]').dataset.goodsId;\n   }\n\n   if (!code && el && el.closest('[data-goods-id]')) code = el.closest('[data-goods-id]').dataset.goodsId;\n  return code.split('?')[0];\n  \n}"
+      }
+    },
+    {
+      "variable_code": "srch_kwd",
+      "variable_name": "srch_kwd",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "tab_name",
+      "variable_name": "tab_name",
+      "enabled": true,
+      "description": "탭 이름",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    const cd = {{customData}};\n    var el = {{clickElement}};\n\n    let tabName = '';\n\n   if ( el && el.matches('.main-header__left')) {\n     return '';\n   }\n    // 알림함\n    if ( el && el.closest('.alarm-list__container')) {\n      const tabEl = document.querySelector('.tab-label.is-selected');\n      tabName = tabEl ? tabEl.innerText : '';\n    }\n\n    // 커머스 - 공용 아이콘 버튼 클릭 시\n    if (el && el.closest('.main-header')){\n      const parent = el.closest('.main-header').parentElement;\n      const activeTab = parent && parent.querySelector('.tab-navigation__menu.is-active');\n      tabName = activeTab ? activeTab.innerText : '';\n    }\n\n    // 휘슬 - 탭 클릭 시, 카드 클릭 시, 상품, 찜하기 \n    if (el && el.querySelector('.tab-label.is-selected')){\n      tabName = el.querySelector('.tab-label.is-selected') && el.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.whistle-main__card-view')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.whistle-main__quick-menu')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.product-item')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.favorite-button')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.whistle-main-shopping__title-top-right')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if (el && el.closest('.whistle-main__tab-content')){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n    } else if ( location.pathname.match('whistle/main$')&& !el && document.querySelector('.tab-item.is-active')){\n      tabName = document.querySelector('.tab-item.is-active').innerText;\n    }\n\n    // 뉴스 - 화면 항목 클릭 시\n    const parentTab = el && el.closest('.news-container__tab');\n    if (parentTab) {\n      const tab = document.querySelector('.tab-label.is-selected');\n      tabName = tab && tab.innerText;\n    }\n\n    // PAGE LOAD\n    if (cd && cd.tab_name) {\n      tabName = cd.tab_name;\n      if (location.pathname.match('/search') && cd.act_type === 'pageview') {\n          sessionStorage.setItem(\"nth_search_tabName\", cd.tab_name);\n      }\n    }\n\n    // 상품 상세 페이지\n    if(location.pathname.match('/product/detail') ){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText.replace(/[\\d,]/g,'') ;\n    } else if (location.pathname.match('/search')) {\n      // 통합검색 - 검색 결과 페이지\n      const searchParent = el && el.closest('.search-result__tab');\n      if (el && el.matches('.tab-item')) {\n        tabName = sessionStorage.getItem(\"nth_search_tabName\");\n      } else if (searchParent) {\n        const tabEl = searchParent.querySelector('.tab-label.is-selected');\n        tabName = tabEl && tabEl.innerText;\n      } else if (el && el.querySelector('.search-header__icon-search')) {\n        const tabEl = document.querySelector(\"button.tab-item > div.tab-label.is-selected\");\n        tabName = tabEl && tabEl.innerText;\n      } else if (el && el.tagName.toLowerCase() === 'button' && el.parentElement.className.includes('more-button')) {\n        tabName = sessionStorage.getItem(\"nth_search_tabName\");\n      } else if (document.querySelector('.is-selected.is-bottom-line-stretch')) {\n        tabName = document.querySelector('.is-selected.is-bottom-line-stretch').innerText;\n      }\n    }else if(location.pathname.match('favorite') ){\n      tabName = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText.replace(/\\d/g,'') ;\n    }\n\n    if(location.pathname.match('myPage/review$') && document.querySelector('button[class*=review-tab-container__tab-button].active')){\n      tabName = document.querySelector('button[class*=review-tab-container__tab-button].active').innerText.replace(/\\d/g,'') ;\n    }if ( location.pathname.match('/store/') && document.querySelector('.store-custom-tab-button.active') ){\n    tabNameIt = document.querySelector('.store-custom-tab-button.active').innerText;\n    tabName = tabNameIt && tabNameIt.trim();\n   }else if ( location.pathname.match('news?') && document.querySelector('.tab-list .tab-label.is-selected') ){\n    tabNameIt = document.querySelector('.tab-list .tab-label.is-selected').innerText;\n    tabName = tabNameIt && tabNameIt.trim();\n   }\n    tabName = tabName && tabName.trim().replace(/[\\r\\n]+/g, ' ').replace(/\\s{2,}/g, ' ');\n    return tabName ? tabName : '';\n}"
+      }
+    },
+    {
+      "variable_code": "tag",
+      "variable_name": "tag",
+      "enabled": true,
+      "description": "태그명",
+      "type": "string",
+      "type_config": {
+        "value": ""
+      }
+    },
+    {
+      "variable_code": "tes",
+      "variable_name": "테스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "test",
+      "variable_name": "테스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "test12",
+      "variable_name": "테스트",
+      "enabled": true
+    },
+    {
+      "variable_code": "page_id",
+      "variable_name": "page_id",
+      "enabled": true,
+      "description": "로드된 PageId",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    const cd = {{customData}};\n    let page_id = '';\n    let el = {{clickElement}};\n    let spage_id = sessionStorage.getItem('nth_page_id');\n\n  \n    if (cd && cd.page_id) {\n      page_id = cd.page_id;\n    }else if(el && spage_id){\n        page_id = spage_id;\n    }else{\n      const path = location.pathname;\n      const url = location.href;\n      const host = new URL(url).hostname;\n      const firstSubdomain = host.split('.')[0]; // \"ecommerce-dev\"\n      page_id = firstSubdomain + path || '';\n    }\n    sessionStorage.setItem('nth_page_id', page_id );\n    return page_id;\n}"
+      }
+    },
+    {
+      "variable_code": "exh_name",
+      "variable_name": "exh_name",
+      "enabled": true,
+      "description": "기획전/배너명",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const el = {{clickElement}};\n  const cd = {{customData}};\n  const path = location.pathname;\n  const hash = location.hash;\n  var exhname = '';\n  if (cd && cd.exh_name) {\n    return cd.exh_name.trim();\n  }\n\n  if (!el && (cd && !cd.impression_type) && path.match('/main/exhibition') && document.querySelector('.exhibition-item__title') ){\n    var items = document.querySelectorAll('.exhibition-item__title');\n    var codes = [];\n       items.forEach((e) => {\n         var item = e.innerText;\n         if (item){\n           codes.push(item.trim());\n         }\n       });  \n       exhname = codes.join('___');\n  \n  } else if(el && el.matches('.exhibition-item')){\n    exhname = el.querySelector('.exhibition-item__title') ? el.querySelector('.exhibition-item__title').innerText : '';\n    \n  } else if (!el && path.match('/main/exhibition') && document.querySelector('.promo__contents') ){\n    exhname = document.querySelector('.promo__contents .promo__title')? document.querySelector('.promo__contents .promo__title').innerText :'';\n  \n  } else if (el && path.match('/rround/v1/payment/mass') && hash.match('#rround/mass/detail')){\n       var event_card = '';\n       var event_month = '';\n       \n       event_month = el.closest('[data-event-card-nm]') ? el.closest('[data-event-card-nm]').getAttribute('data-event-card-nm') : '';\n       event_card = el.closest('[data-event-month]') ? el.closest('[data-event-month]').getAttribute('data-event-month') : '';\n       \n       exhname = event_month + '___' + event_card;\n       if (exhname === '___') {\n         exhname = '';\n       }\n  } else if (!el && path.match('/rround/v1/payment/mass') && hash.match('#rround/mass/detail')){ \n    exhname = document.querySelector('.page-title')? document.querySelector('.page-title').innerText :'';\n  }\n\n  return exhname;\n}"
+      }
+    },
+    {
+      "variable_code": "scroll_rate",
+      "variable_name": "scroll_rate",
+      "enabled": true,
+      "description": "태그의 'CE_scroll감지'로 확인한 퍼센트 리턴",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  var cd = {{customData}};\n  if (cd && cd.scroll_rate){\n    //console.log('NTH >> 스크롤 비율 : ' + cd.scroll_rate);\n    return cd.scroll_rate;\n  }\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "swipe_direct",
+      "variable_name": "swipe_direct",
+      "enabled": true,
+      "description": "tagValue_swipe는 태그의 'CE_swipe감지'로 확인한 swipe 방향 리턴",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  var cd = {{customData}};\n  if (cd && cd.swipe_direct){\n    // console.log('NTH >> 스와이프 방향 : ' + cd.swipe_direct);\n    return cd.swipe_direct;\n  }\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "swipe_area",
+      "variable_name": "swipe_area",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  var cd = {{customData}};\n  if (cd && cd.swipe_area){\n    // console.log('NTH >> 스와이프 영역 : ' + cd.swipe_area);\n    return cd.swipe_area;\n  }\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "channel",
+      "variable_name": "channel",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": "Rround"
+      }
+    },
+    {
+      "variable_code": "TO_os",
+      "variable_name": "TO_os",
+      "enabled": true,
+      "description": "Android, iOS, Windows, MacOS 기준으로 os 정리",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    var txt;\n    var agent;\n\n    agent = window && window.navigator.userAgent;\n    agent = agent && agent.split('(')[1];\n\n    if (agent.includes('Android','android','AOS')){\n      txt = 'Android';\n    } else if (agent.includes('iPhone','iPad','iPod')){\n      txt = 'iOS';\n    } else if (agent.includes('Window')){\n      txt = 'Windows';\n    } else if (agent.includes('Mac OS','Macintosh')){\n      txt = 'MacOS';\n    } else {\n      txt = 'etc';\n    }\n\n    return txt;\n}"
+      }
+    },
+    {
+      "variable_code": "TO_sdk",
+      "variable_name": "TO_sdk",
+      "enabled": true,
+      "description": "",
+      "type": "string",
+      "type_config": {
+        "value": "webview"
+      }
+    },
+    {
+      "variable_code": "click_type",
+      "variable_name": "click_type",
+      "enabled": true,
+      "description": "클릭 타입",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    const el = {{clickElement}};\n    const tag = {{clickTag}};\n    const url = {{url}};\n    const cd = {{customData}};\n    if(cd && cd.click_type) {\n        return cd.click_type;\n    }\n\n    if (!el) {  \n        return '';\n    }\n    let parent = el.parentElement ? el.parentElement.className : '';\n\n    let href = null;\n    if (tag && tag.toLowerCase() === 'a') {\n        href = el.href;\n    }\n    let type = '';\n\n    // 칩버튼\n    const chipbtn = ['.filter__item','category__item','product-detail-whole-reviews__filter-header-option', 'mypage-main__life-chip-list-chip'];\n    // 리뷰\n    const reviews = ['review-preview-swiper', 'photo-and-video-review__list','best-review__card','review-preview-card'];\n    // 검색\n    const searchs = ['shopping-search-button', ];\n    // 카테고리탭\n    const cates = ['favorite-goods__goods-category__item', 'store-tab-button'];\n    // 중 카테고리\n    const mCates = ['second-category__second-category-item', 'category-detail__sub-category-item'];\n    // 브랜드 스토어\n    const brands = ['store-profile__util--favorite-button', 'store-button-like', 'store-button-alarm', 'store-button-coupon'];\n    // 찜하기\n    const likes = ['btn-like', 'ranking-goods-like','bottm-btn-like', 'favorite-button.btn-like','favorite-button'];\n    // 더보기\n    const mores = ['recent-order-item__more-link','category-detail__more-button', 'photo-and-video-review__title-view-more', 'review-more-button','headertype-text__more','mypage-main__information-rround-pay'];\n    // 아이콘\n    const icons = ['shopping-search-button', 'shopping-cart-button'];\n\n    // console.log('NTH TEST ck el >> ', el);\n    if (el.closest('.recent-order-item, .timedeal-item, .product-item, .recent-goods-item-container, .store-grid__item, .ranking-goods-card, product-item__thumb, [data-id*=\"cart-selected-goods__product-detail\"], [data-id*=\"group-buy-item__btn-detail-btn_\"], [data-id*=\"groupbuy-item-\"]') || el.classList.contains('common-review-goods-container')) {\n        if (likes.some(cls => el.classList.contains(cls))) {\n            type = '상품 찜하기';\n        } else {\n            type = '상품';\n        }\n    } else if (url.includes('whistle/main')) { //휘슬 메인\n        // console.log(\"NTH TEST type :::\" + el); \n        if (el.closest('.tab-item')) type = '탭';\n        if (el.closest('.main-header')) type = '상단';\n        if (el.closest('.whistle-main__card-view')) type = '카드리스트';\n        if (el.closest('.whistle-card-button.whistle-card')) type = '카드리스트';\n        if (el.closest('.favorite-button')) type = '상품 찜하기';\n        if (el.closest('.product-item')) type = '상품';     \n        if (el.closest('.whistle-main__quick-menu')) type = '상단 메뉴';\n        if (el.closest('.whistle-main-shopping__title-top')) type = 'CTA'; //더 구경하기\n        if (el.closest('.whistle-main__add-car-item')) type = '자동차아이콘';\n    } else if (brands.some(cls => el.classList.contains(cls))) {\n        if (el.matches('.store-button-coupon')){\n            type = '쿠폰 버튼';\n        } else if(el.matches('.store-button-like, .favorite-button')) {\n            type = '스토어 찜하기';\n        } else if(el.matches('.store-button-alarm')) {\n            type = '알림 버튼';\n        } else {\n            type = '브랜드 스토어';\n        }\n    } else if (el && el.closest('.header-alarm-button')) {\n        type = '알림 아이콘';\n    } else if (el && el.closest('.header-setting-button')) {\n        type = '설정 아이콘';\n    } else if (likes.some(cls => el.classList.contains(cls))) {\n        type = '상품 찜하기';\n    } else if (el.className === 'shopping-cart-button') {\n        type = '장바구니 아이콘';\n    } else if (reviews.some(cls => el.classList.contains(cls)) || el.closest('.review-preview-swiper, .photo-and-video-review__list-item, [data-id=\"product-detail__feedback-above-four-item\"]')) {\n        type = '리뷰';\n    } else if (el.closest('.common-review-item-profile-section, .review-common-profile-section-container, .reviewer-ranking-ranking-item')) {\n        type = '리뷰어 프로필';\n    } else if (el.className === 'shopping-search-button') {\n        type = '검색 아이콘';\n    } else if ( el.className === 'search-input__button' ||\n              el.className === 'search-header__icon-search' || el.closest('.search-header__input-box') ||\n              el.querySelector('.search-header__icon-search')) {\n        type = '검색 아이콘';\n    } else if (el.className === 'search-input__input') {\n        type = '검색 창';\n    } else if (cates.some(cls => el.classList.contains(cls)) || el.closest('.favorite-goods__goods-category')) {\n        // 개발되면 아래 탭에 대해 클래스명 추가 필요\n        // 페이지 이름 : 브랜드 스토어\n        type = '카테고리 탭';\n    } else if (chipbtn.some(cls => el.classList.contains(cls)) || el.closest('.tab.chip.category-tab, .search-result__popular-row, .search-shopping__gender-chip, .search-recent__keywords') || el.matches('.recommend-keyword__item') || el.matches('.tab-item.search-result-tab-feed-profile') || el.matches('.tab-item.search-result-tab-feed-feed')) {\n        type = '칩버튼';\n    } else if (el.classList.contains('search-recent-keyword-chip')) {\n        type = '최근 검색어';\n    } else if (el.classList.contains('search-result__related-keyword-chip')) {\n        type = '연관 검색어';\n    } else if (el.closest('.related-search__item')) {\n        const date = el.closest('.related-search__item').querySelector('.related-search__date');\n        if (date) {\n            type = '최근 검색어';\n        } else {\n            type = '자동 완성 검색어';  \n        }\n    } else if (el.querySelector('.tab-navigation__title')) {\n        type = '상단 탭';\n    } else if (el.closest('.navigation-bottom__list')) {\n        type = '하단 GNB';\n    } else if (el.closest('.navigation-bottom__list')) {\n        type = '하단 GNB';\n    } else if (el.closest('.quickmenu__list, .PopularPart') || el.className === 'quickmenu__icon' || el.className === 'mypage-main__information-quick-menu-item') {\n        type = '퀵버튼';\n    } else if (el.closest('.PopularChartPart, .ranking-keyword, .popular-keyword__swiper-container')) {\n        type = '인기 검색어';\n    } else if (el.closest('.popular-keyword, .popular-keyword__ranking')) {\n        type = '인기 검색어';\n    } else if (el.closest('.KeywordRecommPart')) {\n        type = '추천 검색어';\n    } else if (el.closest('.exhibition-detail__link, .search-shopping__shopping-more-button, .search-profile__more-button, .search-feed__more-button, .mypage-main__information-rround-pay-right, .my-page__item-section ,menu-item, .search-challenge__more-button') || mores.some(cls => el.classList.contains(cls))) {\n        type = '더보기';\n    } else if (el.closest('.custom-banner__link, .commerce-topbanner__swiper, .commerce-popup__swiper-wrap, .topbanner, .custom-banner__link, .auto-swipe-banner__item, .event__list')) {\n        type = '배너';\n    } else if (el.closest('.exhibition-item')) {\n        type = '기획전 리스트';\n    } else if (el.closest('.selector')) {\n        type = '상품정렬/필터';\n    } else if (url.includes('/favorite') && el.closest('.tab-item')) {\n        type = '탭';\n    } else if (el.closest('.category-sliding-panel-body')) {\n        type = '소카테고리';\n    } else if (mCates.some(cls => el.classList.contains(cls))) {\n        type = '중카테고리';\n    } else if (el.classList.contains('first-category-item') || el.classList.contains('second-category__first-category-item')) {\n        type = '대카테고리';\n    } else if (el.classList.contains('tab-label')) {\n        type = '하위 탭';\n    } else if (icons.some(cls => el.classList.contains(cls))) {\n        type = '아이콘';\n    } else if (el.classList.contains('tab-item') || el.matches('.store-custom-tab-button ')) {\n        if (el.closest('.ranking__category') || url.match('exhibition') ){\n            type = '카테고리 탭';\n        } else if (url.match('news')) {\n            type = '상단 탭';\n        } else {\n            type = '탭';\n        }\n    } else if (url.includes('auth/home/myinfo')) { //마이 휘슬\n        //if (el.closest('article.my_box')) type = '마이페이지';\n        if (el.closest('.btns')) type = '마이페이지';\n    } else if (url.includes('wash/auth/main')) { //휘슬 세차 메인\n        if (el.getAttribute('onclick') && el.getAttribute('onclick').includes('funcGoTicketList')) type = 'CTA'; //내이용권\n        if (el.closest('button.bounce')) type = 'CTA'; //내주변세차장보기\n        if (el.closest('button.pk_btn')) type = 'CTA'; //차량등록하기\n        if (el.closest('button.rv_btn')) type = 'CTA'; //예약하기\n        if (el.querySelector('.ico_carwash01')) type = 'CTA'; //제휴 지역 보기\n        if (el.querySelector('.ico_carwash02')) type = 'CTA'; //세차 패키지 소개\n        if (el.querySelector('.ico_carwash03')) type = 'CTA'; //서비스 문의\n        if (el.querySelector('.ico_carwash04')) type = 'CTA'; //사업자 제휴 신청\n        if (el.closest('.carwash_list .package')) type = 'CTA'; //나의 예약 클릭\n    } else if (url.includes('wash/auth/pay')) { //세차 구독권 구매 퍼널\n        if (el.closest('li.f_radio.s')) type = 'CTA'; //구독권\n        if (el.closest('button.btn_default')) type = 'CTA'; //다음, 결제하기\n        if (el.closest('button.btn_voucher')) type = 'CTA'; //상품권선택\n    } else if (url.includes('wash/auth/res/washStation')) { //세차장예약퍼널\n        if (el.closest('.carwash_list')) type = 'CTA'; //세차장목록\n    } else if (url.includes('wash/auth/res/wash/station')) { //세차장예약퍼널\n        if (el.closest('button.skip')) type = 'CTA'; //예약하기\n    } else if (url.includes('/inspection/auth/main')) { //자동차 검사 메인 및 예약 퍼널\n        if (el.closest('button.btn_period')) type = 'CTA'; //검사기간조회\n        if (el.closest('button.btn_text')) type = 'CTA'; //검사FAQ\n        if (el.closest('.vehicle_area-top button')) type = 'CTA'; //추천 검사소\n        if (el.closest('.btn_alram')) type = 'CTA'; //알림 버튼\n        if (el.closest('.pd_mainpop.agree')) type = 'CTA'; //알림 확인 버튼\n    } else if (url.includes('inspection/pick')) { //추천 검사소 정보\n        if (el.closest('.station_list button')) type = 'CTA'; //검사기간조회\n    } else if (url.includes('mpeakdeal/auth/main')) { //중고차\n        if (el.closest('button.btn_square.m.white')) type = 'CTA'; //시세조회\n        if (el.closest('button.btn_round')) type = 'CTA'; //내차팔기\n        if (el.closest('button.btn_round.white.link_more')) type = 'CTA'; //다음달 내차 시세는?\n        if (el.closest('button.link_more')) type = 'CTA'; //더보기\n        if (el.closest('.bnr_news')) type = 'CTA'; //모빌리티 뉴스 \n    } else if (url.includes('/mpeakdeal/auth/ucar/')) { //중고차 시세조회\n        if (el.closest('.distance button')) type = 'CTA'; //시세조회  \n    } else if (url.includes('mpeakdeal/auth/prediction/trend')) { //내 차 시세 조회 퍼널\n        if (el.closest('button.link_more.white')) type = 'CTA'; //최근 실거래가 정보 더보기\n        if (el.closest('#btnSubscription')) type = 'CTA'; //내차 시세 변동 받아보기\n    } else if (url.includes('mpeakdeal/auth/bid/getDetail')) { //중고차 판매 퍼널 중 등록퍼널\n        if (el.closest('button.btn_default.white.s')) {\n            type = 'CTA'; //사진 올리기 최소 5장\n        } else if (el.closest('button.btn_default.white')) { // 중고차 판매 완료페이지 클릭\n            type = 'CTA';\n        }\n    } else if (url.includes('mpeakdeal/auth/ucar/getDetail')) { //중고차 판매 퍼널 중 견적받기\n        if (el.closest('button.btn_float.link_more')) type = 'CTA'; //주행거리를 입력해주세요|세부정보|판매지역\n    } else if (url.includes('auth/violation/main')) { //과태료 조회 납부 메인\n        if (el.closest('button.item')) type = 'CTA'; //주정차및버스전용차로위반|과속 및 신호위반|과태료납부내역\n        if (el.closest('.btn_allim')) type = 'CTA'; //상단 알림버튼\n        if (el.closest('.btn_bottom.link_more')) type = 'CTA'; //하이패스 미납 통행료 확인하러 가기\n    } else if (url.includes('auth/violation/hipass')) { //미납통행료 조회납부 메인\n        if (el.closest('button.item')) type = 'CTA'; //하이패스미납통행료|통행료납부내역 \n        if (el.closest('.btn_allim')) type = 'CTA'; //상단 알림버튼\n        if (el.closest('.btn_bottom.link_more')) type = 'CTA'; //미납과태료조회 확인하러 가기\n    } else if (url.includes('wash/auth/subscription/ticket/list')) { //내 이용권\n        if (el.closest('button.btn_default.white.s')) type = 'CTA'; //예약하기      \n    } else if (url.includes('wash/auth/res/wash/calendar')){ //세차장 예약 퍼널 - 날짜 선택 화면\n        if (el.closest('button.btn_default.btnNext')) type = 'CTA'; //다음       \n    } else if (url.includes('wash/auth/res/wash/booking')){ //세차장 예약 퍼널 - 예약하기\n        if (el.closest('button.btn_default')) type = 'CTA'; //동의하고 예약하기        \n    } else if (url.includes('exchange/detail?type=S')) { // 쇼핑지원금 전환하기\n        type = '쇼핑지원금 전환 버튼';\n    } else if (url.includes('exchange/detail?type=C')) {// 캐시 전환하기\n        type = '캐시 전환 버튼';\n    } else if (url.includes('search') && el.className === 'svg') {\n        type = '더보기';\n    } else if (el.tagName.toLowerCase() === 'button' && url.includes('/withdraw')) {\n        // 탈퇴하기 화면 click_type 정의 후 수정 예정\n        type = '탈퇴';\n    } else if (el.closest('.news-list__category-group-button')) {\n        type = 'CTA';\n    } else if (el.className === 'news-detail__content-emoji-container-button') {\n        type = 'emoticon';\n    } else if (el.className === 'news-detail__content-emoji-container-share-button') {\n        type = '공유 버튼';\n    } else if (el.closest('.whistle-main-header')) {\n        type = '상단';\n    } else if (el.closest('.whistle-main__card-view')) {\n        type = '카드리스트';\n    } else if (el.closest('.whistle-main__quick-menu')) {\n        type = '상단 메뉴';\n    } else if (el.closest('article.my_box')) {\n        type = '마이페이지';\n    } else if (el.closest('.search-feed__list-item-profile, .profile-item')) {\n        type = '피드 프로필';\n    } else if (el.closest('.feed-popular-hashtag__image, .feed-popular-video__image, .feed-notice-content__image, .feed-recommend-profile__image, .feed-latest-content__image, .search-feed__list-item, .feed-tab__feed-list__item')) {\n        type = '피드 게시물';\n    } else if (parent.includes('feed-') || parent.includes('search-feed') || el.className.includes('gallery__item')) {\n        type = '피드';\n    } else if (parent.includes('challenge-') || parent.includes('search-challenge') ||\n              (el.className.includes('challenge-') && url.indexOf('/main') != -1) ||\n              (el.className.includes('challenge_') && url.indexOf('/search') != -1)) {\n        type = '챌린지';\n    } else if (parent.includes('news-') || el.closest('.news-list')) {\n        type = '뉴스';\n    } else if (el.classList.contains('top-banner__slide') || el.closest('.top-banner')) {\n        type = '메인 상단 카드 배너';\n    } else if (el.closest('.modal-backdrop') && url.indexOf('/main/ranking') != -1 ) {\n        type = '필터';\n    } else if (el.closest('.filter__modal__footer, .filter-button, .filter-modal__footer') || (el.closest('.sort-modal__footer, .store-product-header__layout-toggle') &&location.pathname.match('/store/') ) ) {\n        type = '필터';\n    } else if (el.closest('button[class*=product-detail-whole-reviews__filter-body-]') && location.pathname.match('/store/') ) {\n        type = '필터';\n    } else if (el.closest('.cart-selected-goods__total-button') ) {\n        type = '구매 버튼';\n    } else if (el.closest('.recommend-keyword') && el.closest('.recommend-keyword').querySelector('.recommend-keyword__title')) {\n        type =  '칩버튼';\n    } else if (el.closest('.option-selector-restock-alarm')) {\n        type =  '재입고 알림 신청 버튼';\n    } else if (el){\n        if (el.closest('.custom-store__list') && location.pathname.match('product/detail') ) type = '브랜드 스토어';\n        if (el.innerText == '구매하기') type = '구매 버튼';\n        if (el.innerText == '장바구니 담기') type = '장바구니 버튼';\n        if (el.innerText == '바로 구매하기') type = '구매 버튼';\n        if (el.innerText == '재입고 알림 신청') type = '재입고 알림 신청 버튼';\n        if (el.innerText == '상품 문의 작성하기') type = '상품 문의 버튼';\n        if (el.innerText == '쿠폰받기') type = '쿠폰 버튼';\n        if (el.innerText == '구매확정하고 리뷰 작성하기') type = '리뷰 작성';\n        if (el.innerText == '상품 더보기') type = '상품 더보기';\n    } \n\n    if (el && el.matches('.category-detail__more-button') ){\n        type = '카테고리 더보기';\n    } else if (el && ( el.matches('.profile-section-container')|| el.querySelector('.profile-section-container') ) ){\n        type = '리뷰어 프로필';\n    } else if (el && ( el.closest('.my-page__basic-point-section') && location.pathname.match('myPage') ) ){\n        type = '더보기';\n    } else if (el && el.closest('.reviewer-rank-container__reviewer-rank-top') ){\n        type = '리뷰어 랭킹 더보기';\n    } else if (!type && el && el.closest('.review-recomm-item') ){\n        type = '리뷰';\n    }\n    if (el && el.matches('.modal') ){\n        type = 'popup_cta';\n    } else if (el && el.matches('.btn-confirm') && el.closest('.modal-content') && location.pathname.match('v1/steps/main')){\n        type = 'popup_cta';\n    } else if (el && el.closest('.walk-step-list') && location.pathname.match('v1/steps/main')){\n        type = 'CTA';\n    }\n    if (!type && el.closest('[type=bottomSheet]')){\n        if (el.closest('[type=bottomSheet]').querySelector('[name=deliveryRequestOption]')) type = '필터';\n    } else if (el.closest('#ad-element')){\n        type = '광고';\n    }\n\n    // 마이페이지\n    if (el && location.pathname.match('myPage')){\n        if (el.closest('.mypage-main__information-profile-profile-image')){\n            type = '프로필 버튼';\n        } else if (el.closest('.mypage-main__life-cart')){\n            type = '장바구니 버튼';\n        } else if (el.closest('.mypage-section-container__shopping-list')){\n            type = '주문 리스트';\n        } else if (el.closest('.mypage-section-container__shopping-bottom')){\n            type = '퀵버튼';\n        } else if (el.closest('.mypage-section-container__title')){\n            type = '더보기';\n        } else if (el.closest('.mypage-section-container__challenge-list')){\n            type = '챌린지 리스트';\n        } else if (el.closest('.mypage-section-container__feed-bottom-button')){\n            type = '피드 등록';\n        } else if (el.closest('.mypage-section-container__whistle-bottom-row-button')){\n            type = '퀵버튼';\n        } else if (el.closest('.mypage-section-container__whistle-empty-regist')){\n            type = '차량 등록 버튼';\n        } else if (el.closest('.mypage-section-container__menu-list')){\n            type = '더보기';\n        } else if (el.closest('.mypage-section-container__feed-list-item')){\n            type = '피드 리스트';\n        }\n    }\n\n    // 알림함\n    if (el && location.pathname.match('/alarmList')){\n        if (el.closest('.alarm-item__container')){\n            type = '푸시 메시지';\n        }\n    } \n    if (el && el.closest('.main-header__left')) {\n        type = '상단 아이콘';\n    }\n    \n    // console.log('NTH >> 클릭 타입 : ' + type);\n    return type;\n}"
+      }
+    },
+    {
+      "variable_code": "area_type",
+      "variable_name": "area_type",
+      "enabled": true,
+      "description": "data-module-type 값 추출",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    let el = {{clickElement}};\n    const cd = {{customData}};\n    if (cd && cd.area_type) {\n      return cd.area_type;\n    }\n\n    const moduleType = el && el.closest('.custom-module');\n    if (moduleType) {\n        return moduleType.getAttribute('data-module-type') || '';\n    }\n    return '';\n}"
+      }
+    },
+    {
+      "variable_code": "exh_id",
+      "variable_name": "exh_id",
+      "enabled": true,
+      "description": "클릭한 기획전 코드",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n   const el = {{clickElement}};\n   var exhid = '';\n\n  if (!el && location.pathname.match('/main/exhibition$') && document.querySelector('.exhibition-item') ){\n    var items = document.querySelectorAll('.exhibition-item');\n    var codes = [];\n       items.forEach((e) => {\n         var item = e.dataset;\n         if (item && item.exhibitionId){\n           codes.push(item.exhibitionId);\n         }\n       });  \n       exhid = codes.join('___');\n  }else if(el && el.matches('.exhibition-item')){\n    exhid = el.dataset.exhibitionId ? el.dataset.exhibitionId : '';\n  }else if (!el && location.pathname.match('/main/exhibition') && document.querySelector('.promo__contents') ){\n    var urls = location.pathname.split('/');\n    exhid = urls[urls.length -1];\n  }\n  //\n  return exhid;\n}"
+      }
+    },
+    {
+      "variable_code": "AL_popup",
+      "variable_name": "AL_popup",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n\n  var elList = [\".now\" , \".popup\", \".modal\",\".ly_pop.popBtm\"\n\n// -------------------- 휘슬 --------------------\n// whistle-main-header__modal : 휘슬 메인 상단 팝업 (차량등록)\n// whistle-task-header__modal : 휘슬 메인 상단 팝업 (할일)\n, \".whistle-main-header__modal\", \".whistle-task-header__modal\"\n\n                \n// -------------------- 페이 --------------------\n// 페이 메인 전면 팝업\n//, '[data-id=\"frontpop\"]'\n, \".popup-backdrop\"\n// 페이 메인 플로팅 팝업\n//, '[data-id=\"floating\"]'\n, \".popup-slide-up\"\n                \n// -------------------- 쿠팡 --------------------\n// 알림 팝업\n, '[data-id=\"visit-coupang-alarm-agree-modal\"]'\n\n// 현재 세션 기참여 안내 팝업\n, '[data-id=\"coupang-visit-coupang-modal-already-done\"]'\n                \n// 쿠팡 상품 호출 불가 안내 팝업\n, '[data-id=\"coupang-visit-coupang-modal-error\"]'\n                \n// 재시도 안내 팝업\n, '[data-id=\"coupang-visit-coupang-modal-error-cannot-visit\"]'\n\n                \n// -------------------- 두뇌깨우기 (카드뒤집기) --------------------\n// 메인화면\n, '.memory-card-game__ready'\n\n// 게임 N라운드 화면\n, '[class*=\"memory-card-game__grid-round\"]'\n                \n// 게임 N라운드 중단 팝업\n, '[data-id^=\"card_game_exit_modal_\"]'\n\n// 게임 실패 화면\n, '.memory-card-game__game-over'\n\n// 보상 못받음 팝업\n, '[data-id=\"card_game_reward_not_received\"]'\n\n// 두뇌깨우기 보상1:1문의 팝업\n, '[data-id=\"quiz_reward_retry_not_received\"]'\n\n// 오늘은 여기까지 화면\n, '.memory-card-game__end-container'\n\n// 알림받기 팝업\n, '[data-id=\"card-game-alarm-modal\"]'\n\n                \n// -------------------- OX퀴즈 --------------------\n// 초기 진입화면\n, '.daily-lucky-quiz__intro-first'\n// 퀴즈화면 (메인화면)\n//, '.daily-lucky-quiz__quiz-1-content'\n, '[class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"]'\n// 정/오화면 (정답이에요 | 아쉽게도 정답 못맞췄어요)                \n, '.daily-lucky-quiz__result'   \n// 결과화면 (1일차~)\n, '.daily-lucky-quiz__answer'\n//, '.daily-lucky-quiz'\n                \n// 보상화면 (행운상자 속 두가지 행운, 어떤 행운을 고를까요?)\n, '.daily-lucky-quiz__lucky-box-container-select'\n// 포인트 2배 쏙 넣어드렸어요 (광고보고 보상 2배 받기 클릭 - 성공)\n, '.daily-lucky-quiz__lucky-box-container-bouns'\n// 라운드로또 지급 완료! (최대 400만원 로또 받기 클릭)\n, '.daily-lucky-quiz__lucky-box-container-lotto'\n                \n// 보상 실패 프론트 팝업\n, '[data-id=\"quiz_reward_not_received\"]'     \n// 보상 실패 재도전 실패 프론트 팝업 : 두뇌깨우기 보상1:1문의 팝업 동일\n// 퀴즈 완료\n, '[data-id=\"quiz_data_not_found\"]'\n// 알림 팝업\n//, '[data-id=\"daily-lucky-quiz-alarm-modal\"]'\n\n// -------------------- 최저가경매 --------------------\n, '.raffle-bidding-modal-container__result-bidinfo'\n\n// -------------------- 매인개편 내배지 coming soon --------------------\n, '.comingsoon-popover'\n\n// -------------------- 선택형 챌린지 --------------------\n// 참여완료 팝업\n, '[data-id=\"select-challenge-point-modal\"]'\n\n// -------------------- 공동구매 챌린지 --------------------\n// 공유하기 팝업\n, '[data-id*=\"group-buy-share-popup\"]'\n// 알림받기 팝업\n, '[data-id=\"group-buy-alram-popup\"]'\n// 참여완료 팝업 (공동구매 3차부터 제외됨)\n// , '[data-id*=\"group-buy-popup\"]'\n// 쿠폰지급 팝업\n, '[data-id*=\"group-buy-coupon-popup\"]'\n// 공동구매 토스트 팝업\n, '.group-buy-toast__item.active'\n// 공유완료 팝업\n, '[data-id*=\"group-buy-share-done-popup\"]'\n// 쿠폰지급완 팝업\n, '[data-id*=\"group-buy-share-done-coupon-popup\"]'\n// 추천상품 바텀시트\n, '[data-id=\"group-buy-recommend-modal\"]'\n\n// -------------------- 웰컴미션 --------------------\n// 웰컴미션 완료 팝업\n, '[data-id=\"welcome-mission-complete-modal\"]'\n\n// -------------------- PLCC --------------------\n// PLCC 약관동의 팝업\n, '.modal-terms-check'\n\n// 장바구니 하단 펼침 바텀시트\n, '[data-id=\"shopping-cart-plcc-expand-button\"]'\n\n// -------------------- 100원딜 --------------------\n// 100원딜 알림동의 팝업 \n, '[data-id=\"hundred-draw-notification-modal\"]'\n// 100원딜 공유 쿠폰 획득 팝업\n, '[data-id=\"hundred-draw-share-complete-modal\"]'\n// 100원딜 공유 실패 팝업\n, '[data-id=\"hundred-draw_share_fail_modal_share_over\"]'\n// 100원딜 본인 공유 팝업\n, '[data-id=\"hundred-draw_share_fail_modal_self\"]'\n// 100원딜 중복 공유 팝업\n, '[data-id=\"hundred-draw_share_fail_modal_same_chat\"]'\n];\n\n  return elList;\n}"
+      }
+    },
+    {
+      "variable_code": "TO_has_a",
+      "variable_name": "TO_has_a",
+      "enabled": true,
+      "description": "상위에 a 태그 있는지 판단 하는 변수",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const el = {{clickElement}};\n  const a = el && el.closest('a');\n  if (a) {\n    return true;\n  } else {\n    return false;\n  }\n}"
+      }
+    },
+    {
+      "variable_code": "prd_name",
+      "variable_name": "prd_name",
+      "enabled": true,
+      "description": "클릭한 상품명",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    let el = {{clickElement}};\n    const cd = {{customData}};\n    const likes = {{AL_likeBtn_arr}};\n    if (el && likes.some(cls => el.classList.contains(cls))) {\n      el = el.closest('a') || null;\n    }\n    let title = '';\n    if (el && el.closest('div[data-goods-id]') && location.pathname.match('order/cart')){\n      el = el.closest('div[data-goods-id]').querySelector('.cart-selected-goods__goods-name');\n      el && (title = el.innerText);\n    }else if (el && !el.closest('.main-header, .cart-selected-goods__total-button, .order-payment__payment-button')) {\n      // CLICK\n      const titles = ['.title', '.timedeal-item__title', '.store-grid__title', '.custom-banner__title', '.timedeal__banner', '.headertype-image__title', '.custom-banner__title', '.common-review-product-name', '.recent-goods-item-name', '.ranking-goods-name'];\n      const selector = titles.join(', ');\n      const titleEl = el.querySelector(selector);\n      title = titleEl ? titleEl.textContent || titleEl.alt : '';\n      if (title === '') {\n        const nameEl = document.querySelector('.prod-item__display-name');\n        title = nameEl ? nameEl.innerText : '';\n      }\n     if (location.pathname.match('reviewerProfile') && el && el.closest('[data-goods-id]')){\n       title = el.closest('[data-goods-id]').querySelector('.common-review-product-name') ? el.closest('[data-goods-id]').querySelector('.common-review-product-name').innerText : '';\n     }\n    }\n\n    if (cd && cd.act_type === 'pageview' && cd.prd_name) {\n      // PAGE LOAD\n      title = cd.prd_name;\n    }else if (location.pathname.match('order/cart') && document.querySelector('div[data-goods-id]')){\n      if ( el && el.matches('.cart-selected-goods__total-button')){\n       var goods = document.querySelectorAll('.cart-selected-goods__goods-name');\n       var titles = [];\n        goods.forEach((e) => {titles.push(e.innerText);});\n        title = titles.join('___');\n      }else{\n       if (el && el.closest('div[data-goods-id]')) el = el.closest('div[data-goods-id]');\n       if (el && el.querySelector('.cart-selected-goods__goods-name')) title = el.querySelector('.cart-selected-goods__goods-name').innerText;\n      }\n    }else if(location.pathname.match('order/payment') && document.querySelector('p.order-list__goods-name')){\n      if (!el || el.matches('.order-payment__payment-button')){\n        var goods = document.querySelectorAll('p.order-list__goods-name');\n        var titles = [];\n        goods.forEach((e) => {titles.push(e.innerText);});\n        title = titles.join('___');\n      }\n    }else if(location.pathname.match('myPage/recentGoods') && document.querySelector('.recent-goods-item-name')){\n      if (!el){\n        var goods = document.querySelectorAll('.recent-goods-item-name');\n        var titles = [];\n        goods.forEach((e) => {titles.push(e.innerText);});\n        title = titles.join('___');\n      }\n    }else if (el && el.matches('.recent-order-item') && el.querySelector('.recent-order-item__detail-desc > p')){\n     title = el.querySelector('.recent-order-item__detail-desc > p').innerText.trim();\n    }else if (!el && location.pathname.match('product/detail') &&  document.querySelector('.prod-item__display-name')){\n      title = document.querySelector('.prod-item__display-name').innerText;\n    }else if (el && !title && el.closest('.common-review-goods-container,.common-review-item-container ') && el.closest('.common-review-goods-container,.common-review-item-container ').querySelector('.common-review-product-name')){\n       title = el.closest('.common-review-goods-container,.common-review-item-container ').querySelector('.common-review-product-name').innerText;\n    }\n    return title;\n}"
+      }
+    },
+    {
+      "variable_code": "prd_is_ad",
+      "variable_name": "prd_is_ad",
+      "enabled": true,
+      "description": "상품 광고 여부",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  let el = {{clickElement}};\n  const likes = {{AL_likeBtn_arr}};\n  if (el && likes.some(cls => el.classList.contains(cls))) {\n    el = el.closest('a') || null;\n  }\n  let type = '';\n\n // ad 있으면 T로 리턴하는 로직 추가 필요\n if (el) {\n    const prod = el.closest('.product-item, .timedeal-item') || el.closest('.recent-goods-item-container');\n    if (prod) {\n      type = 'F';\n    }\n  }\n\n return type;\n}"
+      }
+    },
+    {
+      "variable_code": "rank",
+      "variable_name": "rank",
+      "enabled": true,
+      "description": "kwd rank",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n   const el = {{clickElement}};\n   if (!el) return '';\n\n   let rankEl = el.querySelector('.ranking') || el.querySelector('.popular-keyword__ranking-number') || el.querySelector('.popular-keyword__rank');\n   const headerEl = el.closest('.ranking-keyword__header');\n   if (headerEl) {\n     rankEl = headerEl.querySelector('.ranking-keyword__ranking');\n   }\n  \n   \n   return rankEl ? rankEl.innerText : '';\n}"
+      }
+    },
+    {
+      "variable_code": "kwd_ctgr",
+      "variable_name": "kwd_ctgr",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n   const el = {{clickElement}};\n   // 인기검색어 태그 파악 후 소스 수정 예정\n   // const kwdEl = el && el.querySelector('');\n   // return kwdEl ? kwdEl.innerText : '';\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "exh_text",
+      "variable_name": "exh_text",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  let el = {{clickElement}};\n\n   const imElements = {{AL_impression}};\n   const matched = imElements.find(im => {\n    try {\n      const container = document.querySelector(im.css);\n      return container && container.contains(el);\n    } catch (e) {\n      return false;\n    }\n  });\n\n  const titleEl = el && (el.querySelector('.exhibition-item__subtitle') || el.querySelector('.headertype-image__title'));\n  if (!matched && titleEl) {\n    return '';\n  }\n\n  var txt = '';\n\n  txt = titleEl ? titleEl.innerText.trim() : '';\n  return txt;\n}"
+      }
+    },
+    {
+      "variable_code": "AL_url",
+      "variable_name": "AL_url",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n   try {\n    const url = new URL({{url}});\n    url.searchParams.delete('reffer_url');\n    return url.toString();\n  } catch (e) {\n    return urlStr;\n  }\n}"
+      }
+    },
+    {
+      "variable_code": "AL_likeBtn_arr",
+      "variable_name": "AL_likeBtn_arr",
+      "enabled": true,
+      "description": "좋아요 버튼 클래스명[배열]",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n   const likes = [\n      'btn-like', \n      'ranking-goods-like',\n      'favorite-button',\n      ''\n   ];\n  return likes;\n}"
+      }
+    },
+    {
+      "variable_code": "card_id",
+      "variable_name": "card_id",
+      "enabled": true,
+      "description": "카드리스트의 카드ID",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n    var el = {{clickElement}};\n    let cardId = '';\n    const path = location.pathname;\n\n    if (el && el.closest('.whistle-card-group, .whistle-card-container')) {\n        cardId = el.getAttribute('data-card-id') || '';\n    }\n    if (!cardId && el && el.closest('.whistle-main__tab-content')){\n      cardId = el.className.split('button ')[1];\n    } else if (el && path.match('/rround/v1/payment/mass')){\n      const hash = location.hash;\n      if (hash.match('#rround/mass/detail')){\n         cardId = el.closest('[data-card-id]') ? el.closest('[data-card-id]').getAttribute('data-card-id') : '';\n      }\n    }\n    return cardId;\n}"
+      }
+    },
+    {
+      "variable_code": "AApay_money",
+      "variable_name": "AApay_money",
+      "enabled": true,
+      "description": "라운드 페이 머니",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const path = {{path}};\n  const pageId = {{page_id}};\n  const payEl = document.querySelector('div.w-full .shadow-custom .justify-between > [class*=text]');\n\n  let text = '';\n\n\n  if (payEl) {\n      text = payEl.innerText.trim();\n      text = text.replace(/원/,'');\n\n  } \n  text && console.log('NTH TEST >> pay: ', text);\n  return text;\n}"
+      }
+    },
+    {
+      "variable_code": "AApay_point",
+      "variable_name": "AApay_point",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const path = {{path}};\n  const pageId = {{page_id}};\n  const payEl = document.querySelector('body > div > div > button:nth-child(2) .ml-auto') ? document.querySelector('body > div > div > button:nth-child(2) .ml-auto') : document.querySelector('body > div > div > button:nth-child(3) .ml-auto');\n\n  let text = '';\n\n\n  if (payEl) {\n      text = payEl.innerText.trim();\n      text = text.replace(/원/,'');\n\n  } \n  text && console.log('NTH TEST >> pay point: ', text);\n  return text;\n}"
+      }
+    },
+    {
+      "variable_code": "AApay_cnt",
+      "variable_name": "AApay_cnt",
+      "enabled": true,
+      "description": "라운드 페이 머니",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const path = {{path}};\n  const pageId = {{page_id}};\n  const payEl = document.querySelector('body > div > div > button:nth-child(4) .ml-auto') ? document.querySelector('body > div > div > button:nth-child(4) .ml-auto') : document.querySelector('body > div > div > button:nth-child(5) .ml-auto') ;\n\n  let text = '';\n\n\n  if (payEl) {\n      text = payEl.innerText.trim();\n      text = text.replace(/건/,'');\n\n  } \n  text && console.log('NTH TEST >> pay_cnt: ', text);\n  return text;\n}"
+      }
+    },
+    {
+      "variable_code": "FC_nthReplace",
+      "variable_name": "FC_nthReplace",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const n_replace = function(tmp){\n    if ( typeof tmp == 'string' ){\n      tmp = tmp.replace(/\\n|\\t/g, \"\").trim(); //개행문자 처리;\n      tmp = tmp.replace(/\\s|\\s+/g, \" \");\n      tmp = tmp.replace(/((\\d{6})[ .-]-?[1-4]\\d{6})|(\\d{6}[ ,-]?[1-4]$)/g, \"******-*******\"); // 주민등록번호 처리;\n      tmp = tmp.replace(/\\d{2}-\\d{2}-\\d{6}-\\d{2}/g, \"**-**-******-**\"); // 운전면허 번호 처리;\n      tmp = tmp.replace(/\\d{2,3}[ ,-]-?\\d{2,4}[ ,-]-?\\d{4}/g, \"***-****-****\"); // 전화 번호 처리;\n      tmp = tmp.replace(/([a-zA-Z]{1}|[a-zA-z]{2})\\d{3}.\\d{4}/g, \"*******\"); // 여권번호 처리;\n      tmp = tmp.replace(/[0-9,\\-]{3,6}\\-[0-9,\\-]{2,6}\\-[0-9,\\-]/g, \"*****-**-****\"); // 계좌번호 처리;\n      tmp = tmp.replace(/[34569][0-9]{3}[-~.[ ]][0-9]{4}[-~.[ ]][0-9]{4}[-~.[ ]][0-9]{4}/g, \"****-****-****-****\"); // 신용카드 처리;\n      tmp = tmp.replace(/[1257][-~.[:space:]][0-9]{10}/g, \"*********\"); // 건강보험 처리;\n      tmp = tmp.replace(/[01][0-9]{5}[[:space:]~-]+[1-8][0-9]{6}|[2-9][0-9]{5}[[:space:]~-]+[1256][0-9]{6}/g, \"*********\"); // 외국인 등록번호 처리;\n      tmp = tmp.replace(/^\\d{2,3}[가-힣]\\d{4}$/g, \"\").trim(); //자동차 번호 처리;\n      tmp = tmp.replace(/\\d{10}/g, \"**********\"); // 연속된 10자리 숫자 처리\n      if(tmp && tmp.length > 100){\n    \ttmp = tmp.substring(0, 98) + '..';\n      }\n      return tmp;\n    }\n  };\n   // 여기에 코드를 작성하세요.\n   return n_replace;\n}"
+      }
+    },
+    {
+      "variable_code": "el_order",
+      "variable_name": "el_order",
+      "enabled": true,
+      "description": "요소 순서",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  let el = {{clickElement}};\n  const cd = {{customData}};\n  var path = location.pathname;\n  var url = document.location.href;\n  if (cd && cd.act_type === 'swipe') {\n    return cd.el_order;\n  }\n  if (!el) return '';\n\n  // 차량검사 - 검사소 목록\n  if (url.includes('inspection/pick')){\n    const match = el.matches('.btn_default.white.s') ? el : '';\n    if (match) {\n      const wrapper = match.closest('ul#list');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('li.item'));\n      const index = items.indexOf(el.closest('li.item')) + 1;\n      return index;\n    }    \n  }\n\n  // 중고차 - 딜러 카드목록\n  if (url.includes('mpeakdeal/auth/bid/getDetail')){\n    const match = el.matches('.dealer_card') ? el : '';\n    if (match) {\n      const wrapper = match.closest('.dealer_card_list');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('article.dealer_card'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n  // 휘슬 할일 팝업 목록\n  if (url.includes('/whistle/main')){\n    const match = el.matches('.whistle-task-header__modal-content-item') ? el : el.closest('.whistle-task-header__modal-content-item');\n    if (match) {\n      const wrapper = match.closest('.whistle-task-header__modal-content');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.whistle-task-header__modal-content-item'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n  // 휘슬 과태료 조회 납부\n  if (url.includes('auth/violation/main')){\n    const match = el.matches('.item') ? el : el.closest('.item');\n    if (match) {\n      const wrapper = match.closest('.grid');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.item'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n  // 휘슬 미납통행 조회 납부\n  if (url.includes('auth/violation/hipass')){\n    const match = el.matches('.item') ? el : el.closest('.item');\n    if (match) {\n      const wrapper = match.closest('.grid');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.item'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n  // 휘슬 메인 카드리스트\n  if (url.includes('/whistle/main')){\n    const match = el.matches('.whistle-card-group, .whistle-card-container.review') ? el : el.closest('.whistle-card-group, .whistle-card-container.review'); //카드리스트\n    if (match) {\n      const wrapper = match.closest('.whistle-main__card-view');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.whistle-card-group, .whistle-card-container.review'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n  // 휘슬 메인 상품\n  if (url.includes('/whistle/main')){\n    const match = el.matches('.product-item') ? el : el.closest('.product-item'); //카드리스트\n    if (match) {\n      const wrapper = match.closest('.product-item-list');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.product-item'));\n      const index = items.indexOf(match) + 1;\n      return index;\n    }    \n  }\n\n // 라운드메인 퀵메뉴\n  const topMenuItem = el.closest('.quickmenu__item');\n  if (topMenuItem) {\n    const wrapper = topMenuItem.closest('.quickmenu__list');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.quickmenu__item'));\n    const index = items.indexOf(topMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 챌린지\n  const chalMenuItem = el.matches('.challenge-list-item') ? el : el.closest('.challenge-list-item');\n  if (chalMenuItem) {\n    const wrapper = chalMenuItem.closest('.challenge-list');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.challenge-list-item'));\n    const index = items.indexOf(chalMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 상품\n  const prdMenuItem = el.closest('.product-item'); \n  if (prdMenuItem) {\n    const wrapper = prdMenuItem.closest('.product-item-list, .commerce-most-reviewed__contents');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.product-item'));\n    const index = items.indexOf(prdMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 피드 갤러리\n  const feedMenuItem = el.matches('.gallery__item') ? el : el.closest('.gallery__item');\n  if (feedMenuItem) {\n    const wrapper = feedMenuItem.closest('.other__gallery');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.gallery__item'));\n    const index = items.indexOf(feedMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 피드 동영상\n  const fvMenuItem = el.matches('.feed-popular-video__item') ? el : el.closest('.feed-popular-video__item');\n  if (fvMenuItem) {\n    const wrapper = fvMenuItem.closest('.feed-popular-video__contents');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.feed-popular-video__item'));\n    const index = items.indexOf(fvMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 피드 프로필 컨텐츠\n  const fpMenuItem = el.matches('.contents__item') ? el : el.closest('.contents__item');\n  if (fpMenuItem) {\n    const wrapper = fpMenuItem.closest('.feed-recommend-profile__contents');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.contents__item'));\n    const index = items.indexOf(fpMenuItem) + 1;\n    return index;\n  }\n  // 라운드메인 피드 새 컨텐츠\n  const flMenuItem = el.matches('.feed-latest-content__image') ? el : el.closest('.feed-latest-content__image');\n  if (flMenuItem) {\n    const wrapper = flMenuItem.closest('.feed-latest-content__contents');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.feed-latest-content__image, .feed-latest-content__list'));\n    const index = items.indexOf(flMenuItem) + 1;\n    return index;\n  }\n\n  // 라운드메인 단일 요소\n  if (el.closest('.feed-recommend-profile__item, .news-card, .challenge-special__contents, .feed-popular-hashtag__item, .commerce-promotion-banner-full__item, .feed-notice-content') ||\n      el.className === 'feed-recommend-profile__image') {\n    return 1;\n  }\n\n  if (url.includes('/news')) {\n    // 뉴스 메인 슬라이더 > data-swiper-slide-index\n    const nsItem = el.closest('.swiper-slide') || el.closest('.main-news-slider__item');\n    const nhMenuItem = el.matches('.news-list-item__hot-container') ? el : el.closest('.nnews-list-item__hot-container');\n    if (nsItem && !nhMenuItem) {\n      const slideIdx = Math.floor(nsItem.getAttribute('data-swiper-slide-index')) + 1;\n      return slideIdx;\n    }\n    // 뉴스 핫이슈\n    if (nhMenuItem) {\n      const wrapper = nhMenuItem.closest('.news-list__hot');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.news-list-item__hot-container'));\n      const index = items.indexOf(nhMenuItem) + 1;\n      return index;\n    }\n    // 뉴스 컨테이너\n    const ncMenuItem = el.matches('.news-list-item__main-container, .news-list-item__sub-container') ? el :\n                       el.closest('.news-list-item__main-container, .news-list-item__sub-container');\n    if (ncMenuItem) {\n      const wrapper = ncMenuItem.closest('.news-list__category-group-item');\n      if (!wrapper) return '';\n      const items = Array.from(wrapper.querySelectorAll('.news-list-item__main-container, .news-list-item__sub-container'));\n      const index = items.indexOf(ncMenuItem) + 1;\n      return index;\n    }\n  }\n\n  // 휘슬 제휴세차장\n  const carWash = el.matches('.item') ? el : el.closest('.item');\n  if (carWash) {\n    const wrapper = carWash.closest('.carwash_list');\n    if (!wrapper) return '';\n    const items = Array.from(wrapper.querySelectorAll('.item'));\n    const index = items.indexOf(carWash) + 1;\n    return index;\n  }\n\n  // 만보기 - 리워드 받기\n  if (path.match('steps/main')){\n    if (el.closest('li.step')) {\n      const wrapper = el.closest('li.step');\n      const items = Array.from(wrapper.querySelectorAll('button'));\n      const index = items.indexOf(el) + 1;\n      return index;\n    }\n  }\n\n  // 두뇌깨우기 (카드뒤집기) - 게임라운드\n  if (path.match('/missions/games/memoryCard')){\n    if (document.querySelector('[class*=\"memory-card-game__grid-round\"]')){\n      const game_step_class = document.querySelector('[class*=\"memory-card-game__grid-round\"]');\n      const game_step = game_step_class.className.match(/memory-card-game__grid-round(\\d+)$/);\n      if (game_step){\n        return game_step[1];\n      }\n    } else if (document.querySelector('[data-game-step]')){\n      const game_step = document.querySelector('[data-game-step]').dataset.gameStep;\n      if (game_step){\n        return game_step;\n      }\n    }\n  }\n\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "module_id",
+      "variable_name": "module_id",
+      "enabled": true,
+      "description": "라운드 메인의 data-module-id 정보",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const el = {{clickElement}};\n  if (!el) return '';\n\n  const modules = {{AL_modules}};\n  let moduleEl = null;\n  modules.some(cls => {\n    const found = el.closest(cls);\n    if (found) {\n      moduleEl = found;\n      return true;\n    }\n    return false;\n  });\n\n  if (moduleEl) {\n    return moduleEl.getAttribute('data-module');\n  }\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "module_order",
+      "variable_name": "module_order",
+      "enabled": true,
+      "description": "라운드 메인의 data-key 정보",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const el = {{clickElement}};\n  if (!el) return '';\n\n  const modules = {{AL_modules}};\n\n  let moduleEl = null;\n  modules.some(cls => {\n    const found = el.closest(cls);\n    if (found) {\n      moduleEl = found;\n      return true;\n    }\n    return false;\n  });\n\n  if (moduleEl) {\n    return moduleEl.getAttribute('data-module-index');\n  }\n  return '';\n}"
+      }
+    },
+    {
+      "variable_code": "act_type",
+      "variable_name": "act_type",
+      "enabled": true,
+      "description": "",
+      "type": "script",
+      "type_config": {
+        "script": "function func(){\n  var cd = {{customData}}; //커스텀 이벤트 분기용\n  var el = {{clickElement}}; //클릭 액션 분기용\n  var event = {{activeTriggers}}; //발동 유형 분기용\n  var url = {{path}};\n  var txt = '';\n\n  // activeTriggers는 1개여도 배열로 들어옴\n  if (Array.isArray(event) && event[0]) {\n    event = event[0].event;\n  } else { return; }\n\n  if ( !el && !cd && url.match('search') ){\n    txt = \"search\";\n  } else if (url.includes('/whistle/main') && event.match(/CLICKED/) && (el.closest('div.whistle-main-header__modal-content') || el.closest('div.whistle-task-header__modal'))) {\n    txt = \"popup_click\";\n  } else if (event.match(/CLICKED/) && el.closest('.ly_pop.ly_list.popBtm')) {\n    txt = \"popup_click\";\n  } else if (event.match(/CLICKED/) && el) {\n    txt = \"click\";\n  } else if (event.match(/CUSTOM/) && cd) {\n    txt = cd.act_type || 'custom';\n  } else if (event.match(/PAGELOADED|DOMREADY|WINDOWLOADED|URLCHANGED|HASHCHANGED/)) {\n     txt = \"pageview\";\n  }\n  // txt && console.log('NTH >> 사용자 행동 : ' + txt);\n\n  return txt;\n}"
+      }
+    },
+    {
+      "variable_code": "banner_position",
+      "variable_name": "banner_position",
+      "enabled": true,
+      "description": "exh > banner",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const el = {{clickElement}};\n  const cd = {{customData}};\n  const imElements = {{AL_impression}};\n  var position = '';\n\n  if (cd && cd.banner_position) {\n    position = cd.banner_position;\n  }\n\n  if (el && imElements){\n    if (el.className === 'search-input__button') return '';\n    imElements.forEach(e => {\n      if (location.pathname === e.page_id &&  el.closest(e.css) ) {\n        position = e.position;\n      }\n    });\n  }\n  // position && console.log('NTH >> 이벤트 영역 :' + position);\n  return position;\n}\n"
+      }
+    },
+    {
+      "variable_code": "AL_modules",
+      "variable_name": "AL_modules",
+      "enabled": true,
+      "description": "라운드 메인 모듈 클래스명",
+      "type": "script",
+      "type_config": {
+        "script": "function func() {\n  const modules = [\n    '.feed-popular-hashtag',\n    '.feed-popular-video',\n    '.feed-latest-content',\n    '.feed-notice-content',\n    '.feed-recommend-profile',\n    \n    '.news-card',\n    \n    '.challenge-contents',\n    \n    '.commerce-promotion-banner-full',\n    '.commerce-most-reviewed',\n    '.commerce-category-ranking',\n    '.commerce-new-arrival'\n  ];\n  return modules;\n}"
+      }
+    }
+  ],
+  "triggers_full": [
+    {
+      "trigger_code": "CLICK_EVENT",
+      "trigger_name": "클릭 이벤트",
+      "event_type": "click",
+      "enabled": true
+    },
+    {
+      "trigger_code": "DOM_READY",
+      "trigger_name": "DOM 로드 완료 시",
+      "event_type": "dom_ready",
+      "enabled": true
+    }
+  ],
+  "tags_full": [
+    {
+      "tag_code": "COMMON_CLICK",
+      "tag_name": "공통 클릭",
+      "trigger_code": "CLICK_EVENT",
+      "event_type": "click",
+      "exec_order": 20,
+      "func_js": "function trackerFunc(send) {\n  return function (e) {\n    const el = e.target.closest(\n      \"a, button, li, div, span, svg, [role=button]\"\n    );\n    if (!el) return;\n\n    send({\n      tag_code: \"COMMON_CLICK\",\n      event_type: \"click\",\n      click_text: el.innerText?.trim().slice(0, 30) || '',\n      class_name: el.className || '',\n      tag: el.tagName\n    });\n  }\n}",
+      "enabled": true,
+      "created_at": "2026-01-26 08:06:21.420"
+    },
+    {
+      "tag_code": "PV_DETAIL",
+      "tag_name": "페이지 상세 PV",
+      "trigger_code": "DOM_READY",
+      "event_type": "pageview",
+      "exec_order": 10,
+      "func_js": "function trackerFunc(send) {\n  return function () {\n    let prd_brand = '';\n    let prd_code = '';\n    let tab_name = '';\n    let srch_kwd = '';\n\n    if (\n      location.pathname.match('product/detail') &&\n      document.querySelector('.prod-item__display-name')\n    ) {\n      const prdel = document.querySelector('.prod-item__display-name').parentElement;\n      prd_brand = prdel.querySelector('div > p')?.innerText || '';\n      prd_code = location.href.split('/').pop();\n\n    } else if (\n      location.pathname.match('/search') &&\n      document.querySelector('.search-result__tab')\n    ) {\n      tab_name =\n        document.querySelector('button > div.is-selected > span')?.innerText || '';\n\n      const inputEl = document.querySelector('.search-header__input');\n      srch_kwd = inputEl?.value || inputEl?.placeholder || '';\n    }\n\n    setTimeout(() => {\n      send({\n        tag_code: \"PV_DETAIL\",\n        event_type: \"pageview\",\n        prd_code,\n        prd_brand,\n        tab_name,\n        srch_kwd\n      });\n    }, 300);\n  }\n}",
+      "enabled": true,
+      "created_at": "2026-01-26 08:06:21.420"
+    }
+  ]
+}

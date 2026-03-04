@@ -1,0 +1,75 @@
+{
+  "description": "다른 웹사이트에서도 사용 가능한 표준 변수·트리거·태그. Admin에서 수동 추가하거나 기존 data/*.json에 병합 참고.",
+  "variables": [
+    {
+      "variable_code": "page_path",
+      "variable_name": "페이지 경로(표준)",
+      "enabled": true,
+      "description": "location.pathname. 스크립트 없음.",
+      "type": "url",
+      "type_config": { "part": "path" }
+    },
+    {
+      "variable_code": "page_url",
+      "variable_name": "페이지 URL(표준)",
+      "enabled": true,
+      "description": "전체 URL. 스크립트 없음.",
+      "type": "url",
+      "type_config": { "part": "href" }
+    },
+    {
+      "variable_code": "document_title",
+      "variable_name": "문서 제목(표준)",
+      "enabled": true,
+      "description": "document.title. 스크립트 없음.",
+      "type": "url",
+      "type_config": { "part": "title" }
+    },
+    {
+      "variable_code": "click_text_std",
+      "variable_name": "클릭 텍스트(표준)",
+      "enabled": true,
+      "description": "클릭한 요소의 textContent. 사이트 구조 무관.",
+      "type": "element",
+      "type_config": { "attribute": "text", "max_length": 200 }
+    },
+    {
+      "variable_code": "click_class_std",
+      "variable_name": "클릭 클래스(표준)",
+      "enabled": true,
+      "description": "클릭한 요소의 className.",
+      "type": "element",
+      "type_config": { "attribute": "className" }
+    }
+  ],
+  "triggers": [
+    {
+      "trigger_code": "CLICK_STANDARD",
+      "trigger_name": "클릭(표준)",
+      "event_type": "element_click",
+      "enabled": true,
+      "description": "공통 클릭 대상. 다른 사이트에서 그대로 사용 가능.",
+      "event_config": {
+        "css_selector": "a, button, [role=button], input[type=submit], input[type=button]"
+      },
+      "conditions": []
+    }
+  ],
+  "tags": [
+    {
+      "tag_code": "STANDARD_CLICK",
+      "tag_name": "표준 클릭",
+      "tag_type": "nlogger",
+      "trigger_code": "CLICK_STANDARD",
+      "triggers": ["CLICK_STANDARD"],
+      "exec_order": 10,
+      "enabled": true,
+      "parameters": [
+        { "key": "click_text", "value": "click_text_std" },
+        { "key": "class_name", "value": "click_class_std" },
+        { "key": "page_id", "value": "page_path" },
+        { "key": "channel", "value": "channel" }
+      ]
+    }
+  ]
+}

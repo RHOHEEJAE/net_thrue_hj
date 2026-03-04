@@ -1,0 +1,4048 @@
+[
+  {
+    "tag_code": "COMMON_CLICK",
+    "tag_name": "공통 클릭",
+    "trigger_code": "CLICK_EVENT",
+    "event_type": "click",
+    "exec_order": 20,
+    "func_js": "function trackerFunc(send) {\n  return function (e) {\n    const el = e.target.closest(\n      \"a, button, li, div, span, svg, [role=button]\"\n    );\n    if (!el) return;\n\n    send({\n      tag_code: \"COMMON_CLICK\",\n      event_type: \"click\",\n      click_text: el.innerText?.trim().slice(0, 30) || '',\n      class_name: el.className || '',\n      tag: el.tagName\n    });\n  }\n}",
+    "enabled": true,
+    "created_at": "2026-01-26 08:06:21.420"
+  },
+  {
+    "tag_code": "PV_DETAIL",
+    "tag_name": "페이지 상세 PV",
+    "trigger_code": "DOM_READY",
+    "event_type": "pageview",
+    "exec_order": 10,
+    "func_js": "function trackerFunc(send) {\n  return function () {\n    let prd_brand = '';\n    let prd_code = '';\n    let tab_name = '';\n    let srch_kwd = '';\n\n    if (\n      location.pathname.match('product/detail') &&\n      document.querySelector('.prod-item__display-name')\n    ) {\n      const prdel = document.querySelector('.prod-item__display-name').parentElement;\n      prd_brand = prdel.querySelector('div > p')?.innerText || '';\n      prd_code = location.href.split('/').pop();\n\n    } else if (\n      location.pathname.match('/search') &&\n      document.querySelector('.search-result__tab')\n    ) {\n      tab_name =\n        document.querySelector('button > div.is-selected > span')?.innerText || '';\n\n      const inputEl = document.querySelector('.search-header__input');\n      srch_kwd = inputEl?.value || inputEl?.placeholder || '';\n    }\n\n    setTimeout(() => {\n      send({\n        tag_code: \"PV_DETAIL\",\n        event_type: \"pageview\",\n        prd_code,\n        prd_brand,\n        tab_name,\n        srch_kwd\n      });\n    }, 300);\n  }\n}",
+    "enabled": true,
+    "created_at": "2026-01-26 08:06:21.420"
+  },
+  {
+    "tag_code": "url change detect",
+    "tag_name": "url change detect",
+    "trigger_code": "DOM_READY",
+    "event_type": "click",
+    "exec_order": 1,
+    "func_js": "function func() {\n  \n  if (window.__pvTrackerInitialized) return;\n  window.__pvTrackerInitialized = true;\n\n  let lastTrackedUrl = null;\n  let lastTrackedTime = 0;\n  let initialUrl = location.href;\n  const TRACK_DEBOUNCE_MS = 300;\n\n  let didInitialLoadFire = false;\n  var timeout;\n  // 예외 처리할 URL 경로 목록\n  const skipPaths = [\n    // 커머스 - 상품 상세, 장바구니, 리뷰 상세보기, 주문&결제, 결제 실패, 찜, 브랜드스토어\n    '/product/detail',\n    '/order/cart',\n    '/review/reviewdetail',\n    '/favorite',\n    '/store$',\n    '/store/[^/]+$',\n    // 휘슬 - 메인\n    //'/whistle/main',\n    // 뉴스 - 상세\n    '/news/detail',\n    // 마이페이지\n    '/myPage$',\n    'category/detail',\n    '/order/payment',\n  //  '/order/processing',\n    \"myPage/recentGoods\",\n    'myPage/review$',\n    \"exchange/main\",\n    \"exchange/detail\",\n    \"exchange/detail/complete\",\n    \"exchange/complete\",\n    \"/search\",\n    \"main/exhibition\",\n    'v1/payments',\n    'order/complete',\n    'myPage/review/reviewerProfile',\n    'news?'\n  ];\n\n  \n  function shouldSkipTracking(url) {\n    return skipPaths.some(path => url.match(path));\n  }\n\n  function sendPageView(url, source) {\n      Ntm00002.Event.fireUserDefined(\"pv\", { act_type: \"pageview\" });\n  }\n \n  function trackPageView(source) {\n    const currentUrl = location.href;\n    const now = Date.now();\n    // console.log('NTH TEST pv trackPageView');\n    if (shouldSkipTracking(currentUrl)) {\n      lastTrackedUrl = currentUrl;\n     // console.log('NTH pv TEST >> Skipped: shouldSkipTracking');\n      return;\n    }\n\n    const isDuplicate =\n      (currentUrl === lastTrackedUrl && source !== 'popstate') ||\n      (currentUrl === initialUrl && !didInitialLoadFire) ||\n      now - lastTrackedTime < TRACK_DEBOUNCE_MS;\n\n    if (!isDuplicate) {\n      lastTrackedUrl = currentUrl;\n      lastTrackedTime = now;\n      setTimeout(() => {\n        sendPageView(currentUrl, source);\n      }, 200);\n    }\n  }\n\n  // 멀티 웹뷰 활성화시\n // if( location.host.match('ecommerce') || location.host.match('main$') ){\n  document.addEventListener('visibilitychange', () => {\n    if (document.visibilityState === 'visible') {\n      clearTimeout(timeout);\n      timeout = setTimeout(() => {\n        Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\" });\n      }, 500);\n    }\n  });\n//  }\n\n\n  // 최초 진입\n\n\n   if(document.readyState === 'interactive' || document.readyState === 'complete'){\n     didInitialLoadFire = true;\n     trackPageView('load');\n   }else {\n     window.addEventListener('load', () => {\n     didInitialLoadFire = true;\n     trackPageView('load');\n     });\n   }\n \n\n  \n  /*\n  window.addEventListener('load', () => {\n    didInitialLoadFire = true;\n    trackPageView('load');\n  });\n  */\n  // pushState 감지\n  const originalPushState = history.pushState;\n  history.pushState = function (...args) {\n    const result = originalPushState.apply(this, args);\n    setTimeout(() => {\n      trackPageView('pushState');\n    }, 0);\n    return result;\n  };\n\n  // popstate 감지\n  if (!window.__nthPVPopstateRegistered) {\n    window.__nthPVPopstateRegistered = true;\n\n    window.addEventListener('popstate', () => {\n      let tries = 0;\n      const maxTries = 10;\n      const interval = setInterval(() => {\n        const currentUrl = location.href;\n\n        if (!shouldSkipTracking(currentUrl)) {\n          trackPageView('popstate');\n          clearInterval(interval);\n        }else{\n          lastTrackedUrl = currentUrl;\n        }\n\n        if (++tries >= maxTries) {\n          clearInterval(interval);\n        }\n      }, 100);\n    });\n  }\n}",
+    "enabled": true,
+    "created_at": "2026-01-26 08:06:21.420",
+    "description": "멀티뷰 로드,\npushState, popState에 한해 페이지 로드 잡는 태그",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": [],
+    "triggers": [
+      "DOM_READY"
+    ],
+    "tag_type": "script"
+  },
+  {
+    "tag_code": "detail pageLoad Detect",
+    "tag_name": "detail pageLoad Detect",
+    "trigger_code": "DOM_READY",
+    "event_type": "pageview",
+    "exec_order": 2,
+    "func_js": "function func() {\n    const matchPaths = [\n        \"/product/detail\",\n        \"/order/cart\",\n        \"/review/reviewdetail\",\n        \"/favorite\",\n        \"/store$\",\n        \"/store/[^/]+$\",\n       //\"/whistle/main\",\n        \"/news/detail\",\n        \"/order/payment\",\n        \"/myPage$\",\n        \"category/detail\",\n        \"myPage/recentGoods\",\n        \"exchange/main\",\n        \"exchange/detail\",\n        \"exchange/detail/complete\",\n        \"exchange/complete\",\n        \"myPage/review$\",\n        \"/search?\",\n      \"main/exhibition\",\n        \"claim/request\",\n      'order/complete',\n      'myPage/review/reviewerProfile',\n      'news?'\n    ];\n    var timeout;\n    \n    var isMatch = matchPaths.some(path => window.location.pathname.match(path));\n    /*\n    if (!isMatch){\n      return '';\n    }\n    */\n    // console.log('NTH TEST >> detail pv');\n    if (location.pathname.match('product/detail')) {\n      clearTimeout(timeout);\n            timeout = setTimeout(() => {\n              // 상품 상세화면 로드\n              // 상품코드,상품브랜드,상품명,상품가격,상품할인가격,할인율,리뷰 수,리뷰평점,상품태그,상품ad여부\n              const prd_code = window.location.href.split(\"/\").pop();\n              const prd_brand = ''; // class 난수\n              const prd_name = document.querySelector('.prod-item__display-name') && document.querySelector('.prod-item__display-name').innerText;\n              const prd_price_origin = document.querySelector('.prod-item__origin-price') && document.querySelector('.prod-item__origin-price').innerText;\n              const prd_price_final = document.querySelector('.prod-item__max-sale-price') && document.querySelector('.prod-item__max-sale-price').innerText;\n              const prd_disc_rate = document.querySelector('.prod-item__sale-rate') && document.querySelector('.prod-item__sale-rate').innerText;\n              const prd_review_cnt = document.querySelector('.prod-item__feedback-review') && document.querySelector('.prod-item__feedback-review').innerText;\n              const prd_review_score = document.querySelector('.prod-item__feedback-score') && document.querySelector('.prod-item__feedback-score').innerText;\n              const prd_tag = Array.from(document.querySelectorAll('.sec-title + div > a'))\n                                  .map(a => a.innerText.trim())\n                                  .join('___');\n              prd_code && Ntm00002.Event.fireUserDefined(\"pvDetail\",\n                                             { act_type: \"pageview\",\n                                               prd_code: prd_code,\n                                               prd_brand: prd_brand,\n                                               prd_name: prd_name,\n                                               prd_price_origin: prd_price_origin,\n                                               prd_price_final: prd_price_final,\n                                               prd_disc_rate: prd_disc_rate,\n                                               prd_review_cnt: prd_review_cnt,\n                                               prd_review_score: prd_review_score,\n                                               prd_tag: prd_tag\n                                             });\n            //  observer.disconnect();\n            }, 1000);\n    } else if (location.href.includes('exchange/detail?type=S')) {\n      clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          // 쇼핑 지원금 전환하기 페이지\n          const balso_s_money = document.getElementById('originalAmount') ? document.getElementById('originalAmount').placeholder : '';\n          const will_convert_rrpay_point = document.getElementById('exChargeAmount') ? document.getElementById('exChargeAmount').placeholder : '';\n          Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                         { act_type: \"pageview\",\n                                          balso_s_money: balso_s_money,\n                                          will_convert_rrpay_point: will_convert_rrpay_point\n                                           });\n        }, 1000);\n    } else if (location.href.includes('exchange/detail?type=C')) {\n      clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          // 캐시 전환하기 페이지\n          const balso_cash = document.getElementById('originalAmount') ? document.getElementById('originalAmount').placeholder : '';\n          const will_convert_rrpay_point = document.getElementById('exChargeAmount') ? document.getElementById('exChargeAmount').placeholder : '';\n          Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                         { act_type: \"pageview\",\n                                          balso_cash: balso_cash,\n                                          will_convert_rrpay_point: will_convert_rrpay_point\n                                           });\n        }, 1000);\n    } else if (location.href.includes('exchange/detail/complete') ||location.href.includes('exchange/complete') ) {\n      clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          // 전환 완료 페이지\n          const convert_rrpay_point = document.querySelector('.complete > .complete-text span') ? \n                                      document.querySelector('.complete > .complete-text span').innerText : '';\n          Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                         { act_type: \"pageview\",\n                                          convert_rrpay_point: convert_rrpay_point\n                                          });\n        }, 1000);\n    }else if (isMatch) {\n      clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                         { act_type: \"pageview\"\n                                          });\n        }, 1000);\n    }\n  \n    const observer = new MutationObserver((mutations) => {\n      isMatch = matchPaths.some(path => window.location.pathname.match(path));\n      isMatch && mutations.forEach((mutation) => {\n        mutation.addedNodes.forEach((node) => {\n         // console.log(\"NTH node chk\" , node);\n          if (node.nodeType === 1 && (node.querySelector('.product-detail-container') || node.matches('.product-detail-container'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n              // 상품 상세화면 로드\n              // 상품코드,상품브랜드,상품명,상품가격,상품할인가격,할인율,리뷰 수,리뷰평점,상품태그,상품ad여부\n              const prd_code = window.location.href.split(\"/\").pop();\n              const prd_brand = ''; // class 난수\n              const prd_name = document.querySelector('.prod-item__display-name') && document.querySelector('.prod-item__display-name').innerText;\n              const prd_price_origin = document.querySelector('.prod-item__origin-price') && document.querySelector('.prod-item__origin-price').innerText;\n              const prd_price_final = document.querySelector('.prod-item__max-sale-price') && document.querySelector('.prod-item__max-sale-price').innerText;\n              const prd_disc_rate = document.querySelector('.prod-item__sale-rate') && document.querySelector('.prod-item__sale-rate').innerText;\n              const prd_review_cnt = document.querySelector('.prod-item__feedback-review') && document.querySelector('.prod-item__feedback-review').innerText;\n              const prd_review_score = document.querySelector('.prod-item__feedback-score') && document.querySelector('.prod-item__feedback-score').innerText;\n              const prd_tag = Array.from(document.querySelectorAll('.sec-title + div > a'))\n                                  .map(a => a.innerText.trim())\n                                  .join('___');\n\n              Ntm00002.Event.fireUserDefined(\"pvDetail\",\n                                             { act_type: \"pageview\",\n                                               prd_code: prd_code,\n                                               prd_brand: prd_brand,\n                                               prd_name: prd_name,\n                                               prd_price_origin: prd_price_origin,\n                                               prd_price_final: prd_price_final,\n                                               prd_disc_rate: prd_disc_rate,\n                                               prd_review_cnt: prd_review_cnt,\n                                               prd_review_score: prd_review_score,\n                                               prd_tag: prd_tag\n                                             });\n             // observer.disconnect();\n            }, 500);\n          } else if (node.nodeType === 1 && node.querySelector('div[data-goods-id], li[data-order-goodsid], .custom-swiper > .productlist-swiper') && location.pathname.match('order/cart') ) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 장바구니 로드\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\" });\n              //  observer.disconnect();\n              }, 500);\n          } else if (node.nodeType === 1 && !window.__pvReviewDetail && node.querySelector('.common-review-item-container') && location.pathname.match('reviewdetail')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 리뷰 상세 로드\n                const prd_review_score = document.querySelector('.rating-score') && document.querySelector('.rating-score').innerText;\n                const prd_brand = document.querySelector('.common-review-brand-name') && document.querySelector('.common-review-brand-name').innerText;\n                const prd_name = document.querySelector('.common-review-product-name') && document.querySelector('.common-review-product-name').innerText;\n                const prd_code = new URL (document.URL).searchParams.get('goodsId');\n              \n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\",\n                                                prd_name: prd_name,\n                                                prd_brand: prd_brand, \n                                                prd_review_score: prd_review_score,\n                                                prd_code: prd_code\n                                               });\n              //  observer.disconnect();\n             }, 500);\n          } else if (node.nodeType === 1 && !window.__pvReviewDetail && node.querySelector('.favorite-goods__container, .favorite-stores__container')) {\n            clearTimeout(timeout);\n             timeout = setTimeout(() => {\n                // 찜한 상품\n                const hrefs = document.querySelectorAll('.recent-goods-item-button');\n                const prd_code = Array.from(hrefs)\n                                      .map(el => {\n                                        const href = el.getAttribute('href') || '';\n                                        const matched = href.match(/detail\\/(\\d+)/);\n                                        return matched ? matched[1] : null;\n                                      })\n                                      .filter(Boolean)\n                                      .join('___');\n                const names = document.querySelectorAll('.recent-goods-item-name');\n                const prd_name = Array.from(names)\n                                        .map(el => el.innerText.trim())\n                                        .join('___');\n                const prices = document.querySelectorAll('.recent-goods-item-price');\n                const prd_price_final = Array.from(prices)\n                                            .map(el => {\n                                              const clone = el.cloneNode(true);\n                                              const rate = clone.querySelector('.recent-goods-item-sale-rate');\n                                              if (rate) rate.remove();\n                                              return clone.innerText.trim();\n                                            })\n                                            .join('___');\n                const rates = document.querySelectorAll('.recent-goods-item-sale-rate');\n                const prd_disc_rate = Array.from(rates)\n                                          .map(el => el.innerText.trim())\n                                          .join('___');\n                \n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\",\n                                                prd_name: prd_name,\n                                                //prd_disc_rate: prd_disc_rate,\n                                                prd_price_final, prd_price_final,\n                                                prd_code: prd_code\n                                               });\n              //  observer.disconnect();\n             }, 500);\n          } else if (node.nodeType === 1 && (node.querySelector('.store-container') || node.matches('.store-hamburger'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 브랜드 스토어 로드\n                const prd_brand = document.querySelector('.store-name') ? document.querySelector('.store-name').innerText : '';\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\", prd_brand: prd_brand });\n               // observer.disconnect();\n              }, 500);\n          } else if (node.nodeType === 1 && (node.querySelector('.whistle-page-main') || node.matches('.whistle-page-main'))) {   \n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 휘슬 메인 페이지로드\n                // 선택된 탭 이름\n                const tab_name = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n                console.log(\"NTH tabname TEST : \" + tab_name);\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\",\n                                                tab_name: tab_name\n                                               });\n              // observer.disconnect();\n             }, 500);\n         } else if (node.nodeType === 1 && (node.querySelector('.news-detail__content') || node.matches('.news-detail__content'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 뉴스 상세 로드\n                // const article_title = document.querySelector('.BalNewsView h2') ? document.querySelector('.BalNewsView h2').innerText : '';\n                const reactAll = document.querySelectorAll('.news-detail__content-emoji-container-button-count');\n                const result = Array.from(reactAll)\n                                    .map(el => el.textContent.trim())\n                                    .join('___');\n              \n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\", \n                                                            // article_title: article_title,\n                                                            react_cnt: result });\n              // observer.disconnect();\n              }, 500);\n          } else if (node.nodeType === 1 && node.matches('.mypage-section-container__shopping-list')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 마이페이지 상세 로드\n                const rrpay_point = document.querySelector('.mypage-main__information-rround-pay-right > .rrpay') ?\n                                    document.querySelector('.mypage-main__information-rround-pay-right > .rrpay').innerText: '';\n                const cart_text = document.querySelector('.mypage-main__life-cart-left') ? document.querySelector('.mypage-main__life-cart-left').innerText : '';\n                const cart_cnt = cart_text.match(/\\d+/) && cart_text.match(/\\d+/)[0];\n                const balso_s_money = document.querySelector('button:nth-child(4) > div.mypage-main__information-rround-pay-right > span') ?\n                                      document.querySelector('button:nth-child(4) > div.mypage-main__information-rround-pay-right > span').innerText: '';\n                const balso_cash = document.querySelector('button:nth-child(5) > div.mypage-main__information-rround-pay-right > span') ?\n                                    document.querySelector('button:nth-child(5) > div.mypage-main__information-rround-pay-right > span').innerText : '';\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\", \n                                                 rrpay_point: rrpay_point,\n                                                 cart_cnt: cart_cnt,\n                                                 balso_s_money: balso_s_money,\n                                                 balso_cash: balso_cash\n                                               });\n              //observer.disconnect();\n              }, 500);\n          }else if (location.pathname.match('category/detail') && node.nodeType === 1 && node.querySelector('h1.category-detail__header-title')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 카테고리 상세 로드\n                const cateid = document.querySelector('h1.category-detail__header-title') ? document.querySelector('h1.category-detail__header-title').dataset.categoryId : ''; \n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\", ctgr_id: cateid });\n               // observer.disconnect();\n              }, 500);\n          }else if (node.nodeType === 1 && (node.matches('.recent-goods') || node.querySelector('.recent-goods'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 최근본 상품 로드\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\"});\n               // observer.disconnect();\n              }, 500);\n          }else if (node.nodeType === 1 && (node.querySelector('.profile-section-container'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n              //리뷰어 상세\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\" });\n              }, 500);\n          } else if (node.nodeType === 1 && node.matches('.swiper-notification')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 마이페이지 포인트 전환 메인 페이지\n                const balso_s_money = document.querySelector('.asset-item.asset-accumulation > .value-wrap strong') ? document.querySelector('.asset-item.asset-accumulation > .value-wrap strong').innerText : '';\n                const balso_cash = document.querySelector('.asset-item.asset-cash > .value-wrap strong') ? document.querySelector('.asset-item.asset-cash > .value-wrap strong').innerText : '';\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\",\n                                                balso_s_money: balso_s_money,\n                                                balso_cash: balso_cash,\n                                                });\n              }, 500);\n          } else if (node.nodeType === 1 && \n                     (node.matches('div.search-result__tab') || node.closest('.search-result__wrap') )) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 검색결과 페이지 최초만 발생\n               \n                const saveTab = sessionStorage.getItem(\"nth_search_tabName\");\n                if (saveTab) {\n                  return;\n                }\n                const tab_name = document.querySelector('button > div.is-selected > span') ? document.querySelector('button > div.is-selected > span').innerText : '';\n                const inputEl = document.querySelector('.search-header__input') ? document.querySelector('.search-header__input') : null;\n                let srch_kwd = '';\n                if (inputEl) {\n                    srch_kwd = inputEl.value || inputEl.placeholder;\n                }\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\",\n                                                 tab_name: tab_name,\n                                                 srch_kwd: srch_kwd\n                                               });\n              }, 1000);\n          } else if (node.nodeType === 1 && (node.matches('section.popular-keyword') || node.querySelector('section.popular-keyword'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 검색 전 페이지\n                sessionStorage.removeItem('nth_search_tabName');\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 1000);\n          }else if (location.pathname.match('search') && node.nodeType === 1 && (node.closest('.KeywordRecommPart') || node.querySelector('.KeywordRecommPart') || node.querySelector('.category-tab'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 쇼핑 검색\n                sessionStorage.removeItem('nth_search_tabName');\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 500);\n          }else if (location.pathname.match('/claim/request/') && node.nodeType === 1 && node.matches('.modal-backdrop') && node.querySelector('.modal-view') ) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n              //구매 취소 홤녀 팝업 상세\n              var popupmsg = node.querySelector('p') ? node.querySelector('p').innerText : '';\n                Ntm00002.Event.fireUserDefined(\"popup\", { act_type: \"popup\", popup_msg:popupmsg });\n              }, 500);\n          }else if (location.pathname.match('main/exhibition') && node.nodeType === 1 && (node.matches('.exhibition-detail, .exhibition-list, .exhibition-detail__promo') || node.querySelector('.page-main-detail .promo__contents, .exhibition-list, .exhibition-detail__promo'))) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 기획전 메인 페이지\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 500);\n          }else if (location.pathname.match('order/complete')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 주문 완료\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 500);\n          }else if (location.pathname.match('myPage$') && node.nodeType === 1 && node.querySelector('.my-page__container')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 마이쇼핑\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 500);\n          }else if (location.pathname.match('order/payment') && node.nodeType === 1 && node.querySelector('.order-list__goods-name')) {\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                // 주문 결제\n                Ntm00002.Event.fireUserDefined(\"pvDetail\", \n                                               { act_type: \"pageview\" });\n              }, 600);\n          }\n        });\n      });\n    });\n  \n    observer.observe(document.body, {\n      childList: true,\n      subtree: true\n    });\n  \n  // [추가] URL 변화 시 pvDetail 전송\n  (function () {\n    let pvDebounce;\n    const whiteList = [\"myPage/review\"];\n    function sendIfMatch() {\n      // 화이트리스트 검사\n      const allowed = whiteList.some((keyword) =>\n        location.href.includes(keyword)\n      );\n      if (!allowed) return;\n      if (matchPaths.some((path) => window.location.pathname.match(path))) {\n        clearTimeout(pvDebounce);\n        pvDebounce = setTimeout(() => {\n          console.log(\"NTM pv debug 26\");\n          Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\" });\n        }, 500);\n      }\n    }\n\n    const _pushState = history.pushState;\n    history.pushState = function (...args) {\n      const ret = _pushState.apply(this, args);\n      setTimeout(sendIfMatch, 0);\n      return ret;\n    };\n\n    const _replaceState = history.replaceState;\n    history.replaceState = function (...args) {\n      const ret = _replaceState.apply(this, args);\n      setTimeout(sendIfMatch, 0);\n      return ret;\n    };\n\n    window.addEventListener(\"popstate\", sendIfMatch);\n  })();\n}",
+    "enabled": true,
+    "created_at": "2026-01-26 08:06:21.420",
+    "description": "페이지로드 시 page_id 이외 상세 페이지 정보 로드 태그\n상품/장바구니 페이지로드 감지\n휘슬 메인 페이지로드 감지\n뉴스 상세 페이지로드 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": [],
+    "triggers": [
+      "DOM_READY"
+    ],
+    "tag_type": "script"
+  },
+  {
+    "tag_code": "Cookie Set",
+    "tag_name": "Cookie Set",
+    "tag_type": "script",
+    "triggers": [
+      "pv(Custom)",
+      "pv_detail(Custom)"
+    ],
+    "trigger_code": "pv(Custom)",
+    "exec_order": 3,
+    "enabled": true,
+    "func_js": "function func() {\n  var date = new Date;\n  var vtime = date.getTime();\n  var cookieTimeout = 30; // 초 , 일, 월 조절\n\n  function nthDoamin(){\n    var domain = document.domain.split(\".\");\n    domain.shift();\n    return domain.join(\".\");\n  }\n  \n  function nthExpire(){\n    var delay = 600000;\n    var date = new Date;\n    date.setTime( date.getTime() + delay );\n    return date;\n  }\n  \n  //Ntm00002.Cookie.set('sessionId',skey,{path:'/', domain:nthDoamin(), expires : nthExpire()});\n  Ntm00002.Cookie.set('pageLoadTime',vtime,{path:'/'});\n  // Ntm00002.Cookie.set('sourceType','C',{path:'/'});\n\n}",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "pv(Custom)"
+      },
+      {
+        "trigger_code": "pv_detail(Custom)"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Scroll Detect",
+    "tag_name": "Scroll Detect",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 4,
+    "enabled": true,
+    "func_js": "function func() {\n    var rateYn = true; //true : 화면 비율, false : 스크롤 비율\n    var scrollRateArr = [25, 50, 75, 99]; // 100는 99로 설정\n    var el = document.querySelector('body'); // 전체 높이를 가져올 element \n    var docHeight = recalculateDocumentSize();\n    var currentPercentage = 0;\n    var previousPercentage = 0;\n    var path = location.pathname;\n    var scrollHeight = el.offsetHeight;\n    var timeout;\n\n    var observer = new MutationObserver(() => {\n      var newScrollHeight = el.offsetHeight;\n      if (newScrollHeight !== scrollHeight) {\n        docHeight = recalculateDocumentSize();\n        n_scroll();\n        scrollHeight = newScrollHeight;\n      }\n    });\n\n    function scrollListener(){\n      window.addEventListener('scroll', n_scrollWrapper);\n      observer.observe(document.body, {\n        childList: true,\n        subtree: true,\n      });\n    }\n\n    scrollListener();\n\n    //스크롤 이벤트가 발생할 때마다 갱신\n    function n_scrollWrapper() {\n      n_scroll();\n    }\n\n    // 스크롤 기준값 체크 및 발동하는 함수\n    function n_scroll(e) {\n      var scrollVal = rateYn ? document.documentElement.clientHeight + this.scrollY : this.scrollY;\n      var docHeight = rateYn ? el.offsetHeight : el.offsetHeight - document.documentElement.clientHeight;\n      var scrollPercentage = Math.round(scrollVal / docHeight * 100);\n      var i = 0;\n      // 기준값으로 설정한 스크롤 비율을 넘어서면 currentPercentage에 저장함\n      while (scrollRateArr[i] <= scrollPercentage) {\n        currentPercentage = scrollRateArr[i++];\n      }\n      if (scrollY > 0 && (previousPercentage !== currentPercentage) && (scrollPercentage >= 25)) {\n        clearTimeout(timeout);\n        timeout = currentPercentage !== 0 && currentPercentage > previousPercentage\n          ? setTimeout(() => { \n            // console.log(\"DEBUG NTH >> SCROLL %: \" + currentPercentage);\n            Ntm00002.Event.fireUserDefined(\"scroll\", { \"scroll_rate\": currentPercentage, \"act_type\": \"scroll\"});\n            previousPercentage = currentPercentage;\n          }, 500)\n          : null;\n      }\n    }\n\n    // 문서 크기를 재계산 하는 함수\n    function recalculateDocumentSize() {\n      var newDocHeight = el.offsetHeight;\n      previousPercentage = 0;\n      currentPercentage = 0;\n      return newDocHeight;\n    }\n}",
+    "description": "custom event scroll 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Swipe Detect",
+    "tag_name": "Swipe Detect",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 5,
+    "enabled": true,
+    "func_js": "function func() {\n  const path = location.pathname;\n  const moveRate = 80;  // 어느정도 swipe 시 감지할 것인지 설정\n  const swipeElements = {{AL_swipe}};\n  const attachedElements = new Set(); // 중복 등록 방지용 Set\n  \n  const containerSelectors = ['.page-main', '.product-detail-container', '.news-container__tab', '.layout-outlet-part']; \n  const containers = document.querySelectorAll(containerSelectors.join(','));\n  var timeout;\n  function watchdog(){\n  if (containers.length > 0) {\n    containers.forEach(container => {\n      const observer = new MutationObserver((mutationsList) => {\n        for (const mutation of mutationsList) {\n          swipeElements.forEach((swipeElement) => {\n            const found = document.querySelector(swipeElement.css);\n            if (found && !attachedElements.has(found) && path.includes(swipeElement.pageid)) {\n              detectSwipe(swipeElement, handleSwipeDirection);\n              attachedElements.add(found); // 중복 방지\n            }\n          });\n        }\n      });\n\n      observer.observe(container, {\n        childList: true,\n        subtree: true\n      });\n    });\n  }\n\n  // 뉴스 상세 항목\n  function getNewsInfo(el) {\n    const infoArr = [];\n    \n  }\n\n  // 스와이프 감지 함수\n  function detectSwipe(element, callback) {\n    let touchstartX = 0;\n    let touchendX = 0;\n\n    const target = document.querySelector(element.css);\n    if (!target) {\n      return;\n    }\n\n    target.addEventListener('touchstart', (e) => {\n      touchstartX = e.touches[0].clientX;\n    }, { passive: true });\n\n    target.addEventListener('touchend', (e) => {\n      touchendX = e.changedTouches[0].clientX;\n      handleSwipe();\n    }, { passive: true });\n\n    function handleSwipe() {\n      const move = touchstartX - touchendX;\n      let exh_name = '';\n      let list_id = '';\n      let list_name = '';\n      let el_name = '';\n      let el_order = '';\n      let news_seq = '';\n      let banner_id = '';\n      let banner_order = '';\n      let banner_url = '';\n      let banner_type = '배너';\n      let rcmd_kwd = '';\n      let position = '';\n      \n      if (element.css) {\n        const el = document.querySelector(element.css);\n        \n        if (el && element.isBanner && !element.varType) {\n         let text = '';\n         const txtEl = el.querySelector(element.class);\n         text = txtEl ? txtEl.innerText : '';\n         if (txtEl && txtEl.querySelector('h2')) text = txtEl.querySelector('h2').innerText;\n         if (txtEl && txtEl.querySelector('img')) text = txtEl.querySelector('img').alt;\n         exh_name = text;\n        } else if (el && element.varType === 'news') {\n          // 뉴스 상세 항목\n          // list_id, list_name, el_name, el_order, news_seq\n          const activeEl = el.querySelector('.swiper-slide-active');\n          const aEl = activeEl && activeEl.querySelector('.news-list-item__hot-container, .main-news-slider__item');\n          const match = aEl && aEl.href.match(/categoryId=(\\d+)/);\n          list_id = match && match[1];\n          list_name = \"핫이슈\";\n          const matchId = aEl && aEl.href.match(/\\/news\\/detail\\/(\\d+)/);\n          news_seq = matchId ? matchId[1] : '';\n          if (activeEl && (activeEl.closest('[data-news-seq]') || activeEl.querySelector('[data-news-seq]'))){\n            news_seq = activeEl.closest('[data-news-seq]') ? activeEl.closest('[data-news-seq]').dataset.newsSeq : activeEl.querySelector('[data-news-seq]').dataset.newsSeq;\n          }\n          const title = activeEl && activeEl.querySelector('.news-list-item__hot-container-title');\n          el_name = title && title.innerText;\n          if (!el_name && activeEl && activeEl.querySelector('a > img') ){\n            el_name = activeEl.querySelector('a > img').alt;\n          }\n          const MenuItem = activeEl.matches('.swiper-slide') ? activeEl : activeEl.closest('.swiper-slide');\n          if (MenuItem) {\n            if (MenuItem.closest('.main-news-slider')) list_name = \"뉴스 상단 슬라이드\";\n\n            const wrapper = MenuItem.closest('.news-list__hot, .main-news-slider');\n\n            if (!wrapper) return '';\n            if ( MenuItem.matches('[data-swiper-slide-index]')){\n                el_order = Math.floor(MenuItem.dataset.swiperSlideIndex) + 1;\n            }else{\n              const items = Array.from(wrapper.querySelectorAll('.swiper-slide'));\n              el_order = items.indexOf(MenuItem) + 1;\n            }\n          }\n        } else if (el && element.varType === 'main') {\n          // 라운드 메인 배너\n          // banner_position, banner_id, banner_order, banner_url, rcmd_kwd\n          const activeEl = el.querySelector('.swiper-slide-active');\n          banner_id = activeEl ? activeEl.dataset.seq : '';\n          banner_url = activeEl ? activeEl.dataset.value : '';\n          banner_order = activeEl ? activeEl.dataset.swiperSlideIndex : '';\n          position = element.position;\n\n          const inputEl = document.querySelector('.search-input__input');\n          rcmd_kwd = inputEl ? inputEl.value : '';\n        } else if (el) {\n          // 라운드 메인 배너\n          // banner_position, banner_id, banner_order, banner_url, rcmd_kwd\n          const activeEl = el.querySelector('.swiper-slide-active');\n          if (activeEl ){\n            banner_id = activeEl.dataset.seq ? activeEl.dataset.seq : activeEl.querySelector('[data-banner-id]') ? activeEl.querySelector('[data-banner-id]').dataset.bannerId  : '';\n            banner_url = activeEl.dataset.value ? activeEl.dataset.value : activeEl.querySelector('[href]') ? activeEl.querySelector('[href]').href : '';\n            banner_order = activeEl.dataset.swiperSlideIndex ? activeEl.dataset.swiperSlideIndex : '';\n            position = element.position;\n\n          const inputEl = document.querySelector('.search-input__input');\n          rcmd_kwd = inputEl ? inputEl.value : '';\n          }\n        }\n      }\n\n      if (touchendX < touchstartX && move > moveRate) {\n        callback('left', element.area, exh_name, list_id, list_name, el_name, el_order, news_seq, position, banner_id, banner_url, banner_order, rcmd_kwd, banner_type);\n      } else if (touchendX > touchstartX && move < -moveRate) {\n        callback('right', element.area, exh_name, list_id, list_name, el_name, el_order, news_seq, position, banner_id, banner_url, banner_order, rcmd_kwd, banner_type);\n      }\n    }\n  }\n\n  // 스와이프 커스텀 함수 호출\n  function handleSwipeDirection(direction, area, exh_name, list_id, list_name, el_name, el_order, news_seq, position, banner_id, banner_url, banner_order, rcmd_kwd, banner_type) {\n    Ntm00002.Event.fireUserDefined(\"swipe\", {\n      swipe_direct: direction,\n      swipe_area: area,\n      banner_position: position,\n      banner_id: banner_id,\n      banner_url: banner_url,\n      banner_type: banner_type,\n      banner_order: banner_order,\n      rcmd_kwd: rcmd_kwd,\n      exh_name: exh_name,\n      list_id: list_id,\n      list_name: list_name,\n      el_name: el_name,\n      el_order: el_order,\n      news_seq: news_seq,\n      act_type: 'swipe'\n    });\n  }\n  swipeElements.forEach((swipeElement) => {\n    if(location.pathname === swipeElement.pageid){\n            const found = document.querySelector(swipeElement.css);\n            if (found && !attachedElements.has(found) && path.includes(swipeElement.pageid)) {\n              detectSwipe(swipeElement, handleSwipeDirection);\n              attachedElements.add(found); // 중복 방지\n            }\n    }\n  });\n  }\n  watchdog();\n  const newobserver = new MutationObserver((mutations) => {\n    if (location.pathname.match('news$')){\n    mutations.forEach((mutation) => {\n        mutation.addedNodes.forEach((node) => {\n            if (node.nodeType === 1 && node.matches('.news-list__category-group-item')){\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n                watchdog();\n            }, 500);\n            }\n        });\n    });\n    }\n  });\n  newobserver.observe(document.body, {\n      childList: true,\n      subtree: true\n  });\n}",
+    "description": "custom event swipe 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Popup Detect",
+    "tag_name": "Popup Detect",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 6,
+    "enabled": true,
+    "func_js": "function func() {\n  var elList = {{AL_popup}};\n  var targetList = '';\n  var body = document.querySelector(\"body\");\n  var config = {attributes:true, attributeFilter:['class','style', 'data-id']};\n  var timeout;\n\n\n  function eventCall(el){\n    var popup_h1 = el.querySelector('h1');\n    var popup_title = popup_h1 && popup_h1.childNodes[0] && popup_h1.childNodes[0].data || '';\n    var reward_price = '';\n    if (el.querySelector('#txt-reward') && location.pathname.match('v1/steps/main')){\n      reward_price = el.querySelector('#txt-reward').innerText.trim().replace(/[^\\d]/g,'');\n    }\n    if(!popup_title){\n      if(el.querySelector('#promptTitle')){\n        popup_title = el.querySelector('#promptTitle').innerText;\n      }else{\n        popup_title = el.querySelector('.modal-head-title, h2, .whistle-task-header__modal-title')  ? el.querySelector('.modal-head-title, h2, .whistle-task-header__modal-title').innerText  : '';\n      }\n    }\n    \n    //var popup_id = el.querySelector('h1')  ? el.querySelector('h1').childNodes[0].data.replace(/ /g,'')  : '';\n    var popup_id = '';\n    if (el.querySelector('h1')) {\n      popup_id = popup_title.replace(/ /g,'');\n    }\n    if (el.closest('[data-id]')) {\n        popup_id = el.closest('[data-id]').dataset.id;\n    }\n    if (el.querySelector('[data-id]')){\n      if (el.querySelector('[data-id]').dataset.id === 'frontpop'){\n        popup_id = el.querySelector('[data-id]').dataset.frontpopId;\n      }\n      else if (el.querySelector('[data-id]').dataset.id === 'floating'){\n        popup_id = el.querySelector('[data-id]').dataset.floatingId;\n      }\n    }\n    if (el.closest('.modal')) popup_id = el.closest('.modal').id;\n    var popup_msg = el.querySelector('p,span') ? el.querySelector('p,span').innerText : '';\n    if (el.matches('.raffle-bidding-modal-container__result-bidinfo')) popup_msg = el.innerText.replace('\\n',' ');\n    var step_interval = el.closest('[data-step-interval]') ? el.closest('[data-step-interval]').dataset.stepInterval + \"___\" + el.closest('[data-step-interval]').dataset.nextRewardType : '';\n    //var myTicket = el.querySelector('h3');\n    var myTicket = el.querySelector('h3') ? el.querySelector('h3') : '' ;\n    if (myTicket && myTicket.innerText == '내 이용권 선택') {\n      popup_msg = myTicket.innerText;\n    }\n    var data_id = '';\n    if (el.matches('[class*=\"memory-card-game__grid-round\"]')){\n      data_id = el.className.match(/memory-card-game__grid-round(\\d+)$/)[0];\n    } else if (el.matches('.memory-card-game__ready, .memory-card-game__game-over, .memory-card-game__end-container, .daily-lucky-quiz__intro-first, [class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"], .daily-lucky-quiz__answer, .daily-lucky-quiz__lucky-box-container-select, .daily-lucky-quiz__lucky-box-container-bouns, .daily-lucky-quiz__lucky-box-container-lotto, .raffle-bidding-modal-container__result-bidinfo, .comingsoon-popover')){\n      data_id = el.className;\n    } else if (el.closest('[data-id]')) {\n        data_id = el.closest('[data-id]').dataset.id;\n    } else if (el.querySelector('[data-id]')){\n      data_id = el.querySelector('[data-id]').dataset.id;\n    }\n    if (el.matches('[class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"]')){\n      data_id = el.className.match(/daily-lucky-quiz__quiz-\\d+-content/)[0];\n    }\n    if (el.matches('.daily-lucky-quiz__result')){\n      if (el.querySelector('.daily-lucky-quiz__result-correct-lottie')){\n        data_id = 'daily-lucky-quiz__result-correct-lottie';\n      } else if (el.querySelector('.daily-lucky-quiz__result-lottie')){\n        data_id = 'daily-lucky-quiz__result-lottie';\n      }\n    }\n    console.log('NTM >> loggingEl : ', el);\n    Ntm00002.Event.fireUserDefined(\"popup\" ,\n                                   { popup_title : popup_title\n                                    , popup_id : popup_id\n                                    , step_interval: step_interval\n                                    , act_type: \"popup\"\n                                    , popup_msg: popup_msg\n                                    , reward_price: reward_price\n                                    , data_id: data_id\n                                   });\n    console.log('NTM>> NTM00002 전송완료');\n  }\n\n  function n_replace(tmp){\n    tmp = tmp.replace(/\\s|\\s+/g, \" \");\n    tmp = tmp.replace(/\\n|\\t/g, \"\").trim();\n    if(tmp && tmp.length > 100){\n    \ttmp = tmp.substring(0, 100) + '...';\n    }\n    return tmp;\n  }\n\n\n//document.querySelectorAll('[class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"]')\n // dom 읽어서 감시항목 등록\n  var callback = function(mutationList, observer){\n    for(var mutation of mutationList){\n      var class_target = '.whistle-task-header__modal, .group-buy-toast__item.active, .modal-terms-check';\n      var data_id_target = '[data-id=\"coupang-visit-coupang-modal-already-done\"], [data-id=\"coupang-visit-coupang-modal-error\"], [data-id=\"coupang-visit-coupang-modal-error-cannot-visit\"], [data-id=\"card_game_reward_not_received\"], [data-id=\"quiz_reward_retry_not_received\"], [data-id=\"quiz_reward_not_received\"], [data-id=\"quiz_data_not_found\"], [data-id=\"select-challenge-point-modal\"], [data-id*=\"group-buy-share-popup\"], [data-id=\"group-buy-alram-popup\"], [data-id*=\"group-buy-coupon-popup\"], [data-id*=\"group-buy-share-done-popup\"], [data-id*=\"group-buy-share-done-coupon-popup\"], [data-id=\"welcome-mission-complete-modal\"], [data-id=\"shopping-cart-plcc-expand-button\"], [data-id=\"group-buy-recommend-modal\"], [data-id=\"hundred-draw-notification-modal\"], [data-id=\"hundred-draw-share-complete-modal\"], [data-id=\"hundred-draw_share_fail_modal_share_over\"], [data-id=\"hundred-draw_share_fail_modal_self“], [data-id=\"hundred-draw_share_fail_modal_same_chat\"]';\n      if(mutation.attributeName == 'class' && mutation.target.matches('.open, .show')){\n        clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          if(mutation.target.matches('[class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"]')) {\n            return;\n          }\n            console.log('NTM >> .show 감지 로깅 실행', mutation.target);\n            eventCall(mutation.target);\n          },200);\n      }else if(mutation.target.getAttribute('style') && mutation.target.matches('.modal') && mutation.attributeName == 'style' && mutation.target.getAttribute('style').match('block') && !mutation.target.getAttribute('style').match('opac')){\n        console.log(\"Matched .whistle-task-header__modal class mutation\");\n        clearTimeout(timeout);\n        timeout = setTimeout(() => {\n            eventCall(mutation.target);\n          },200);\n      } else if (mutation.attributeName === 'class' && mutation.target.matches(class_target)){\n        clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          eventCall(mutation.target);\n        }, 200);\n      } else if (mutation.attributeName === 'data-id' && mutation.target.matches(data_id_target)){\n        clearTimeout(timeout);\n        timeout = setTimeout(() => {\n          eventCall(mutation.target);\n        }, 200);\n      }\n    }\n  };\n  var observer = new MutationObserver(callback);\n\n\nelList.forEach(el => {\n    targetList = document.querySelectorAll(el); \n    targetList.forEach((e) => {\n\n       if (e.matches('.daily-lucky-quiz__intro-first, [data-id=\"quiz_data_not_found\"], .popup-backdrop, .popup-slide-up')) {\n         setTimeout(() => {\n         if (document.contains(e)) {\n            console.log('NTM >> 초기 팝업요소 로깅 el : ', e);\n            eventCall(e);\n          }\n         }, 1000); // 1초 지연\n       }      \n      e && observer.observe(e, config);\n    });\n});\n  //============================================================\n\n  // 늦게 생성되는 element 감지하여 등록\n  var newobserver = new MutationObserver(function(mutationList, ob){\n    for(var mutation of mutationList){\n      mutation.addedNodes.forEach(function (node) {\n        elList.forEach(el => {\n          if (node.nodeType === Node.ELEMENT_NODE && (node.matches(el) || node.querySelector(el))){\n            console.log('NTH >> 늦게생성감지 디버깅 포인트', node);\n            var newel = node.matches(el) ? node : node.querySelector(el);\n            observer.observe(newel, config);\n            const target_matches = '[data-id=\"visit-coupang-alarm-agree-modal\"], [data-id=\"coupang-visit-coupang-modal-already-done\"], [data-id=\"coupang-visit-coupang-modal-error\"], [data-id=\"coupang-visit-coupang-modal-error-cannot-visit\"], [data-id^=\"card_game_exit_modal_\"], [data-id=\"card-game-alarm-modal\"], [data-id=\"card_game_reward_not_received\"], [data-id=\"quiz_reward_retry_not_received\"], .daily-lucky-quiz__result, .daily-lucky-quiz__answer, .daily-lucky-quiz__lucky-box-container-bouns, .daily-lucky-quiz__lucky-box-container-lotto, [data-id=\"quiz_reward_not_received\"], .memory-card-game__game-over, .memory-card-game__end-container, .raffle-bidding-modal-container__result-bidinfo, .comingsoon-popover, [data-id=\"select-challenge-point-modal\"], [data-id*=\"group-buy-share-popup\"], [data-id=\"group-buy-alram-popup\"], [data-id*=\"group-buy-coupon-popup\"], .group-buy-toast__item.active, [data-id*=\"group-buy-share-done-popup\"], [data-id*=\"group-buy-share-done-coupon-popup\"], [data-id=\"welcome-mission-complete-modal\"], [data-id=\"group-buy-recommend-modal\"], [data-id=\"hundred-draw-notification-modal\"], [data-id=\"hundred-draw-share-complete-modal\"], [data-id=\"hundred-draw_share_fail_modal_share_over\"], [data-id=\"hundred-draw_share_fail_modal_self\"], [data-id=\"hundred-draw_share_fail_modal_same_chat\"]';\n            const target_child = '.whistle-main-header__modal, .whistle-task-header__modal, .memory-card-game__ready, [class*=\"memory-card-game__grid-round\"], .daily-lucky-quiz__lucky-box-container-select, [class^=\"daily-lucky-quiz__quiz-\"][class*=\"-content\"], .modal-terms-check, [data-id=\"shopping-cart-plcc-expand-button\"]';\n            const target = node.matches(target_matches) ? node : node.querySelector(target_child);\n              if (target) {\n              console.log('NTM >> target node : ', node);\n              eventCall(target);\n            }\n          }\n        });\n      });\n    }\n  });\n  newobserver.observe(body, {childList: true, subtree: true}); \n  //============================================================\n}",
+    "description": "팝업 생성 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Scroll_Impression Detect",
+    "tag_name": "Scroll_Impression Detect",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 7,
+    "enabled": true,
+    "func_js": "function func() {\n  var reimpression = true; // true: 계속 감지, false: 한 번만 감지\n  var impressionRate = 0.3;\n  var timeout;\n\n  // 노출되는 화면 크기 수동 체크\n  function isActuallyVisible(el, threshold) {\n    const rect = el.getBoundingClientRect();\n    const visibleHeight = Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);\n    const visibleRatio = visibleHeight / rect.height;\n    return visibleRatio >= threshold;\n  }\n\n  // imElements.forEach(function (e, i) {\n  //   waitForElement(e.css, () => observeTargets(e));\n  // });\n\n  // main 영역\n  function watchDog(){\n  waitForElement('section.custom-module', () => {\n    document.querySelectorAll('section.custom-module').forEach(section => {\n      const moduleType = section.getAttribute('data-module-type');\n      const dataId = section.getAttribute('data-id');\n      const modulePos = section.getAttribute('data-module-position');\n\n      const cssSelector = `section[data-module-type=\"${moduleType}\"][data-id=\"${dataId}\"][data-module-position=\"${modulePos}\"]`;\n\n      const title = section.querySelector('h2');\n      const text = title ? title.innerText : '';\n\n      observeTargets({\n        nth_pageId: '/main/home',\n        css: cssSelector,\n        nth_areaNo: modulePos,\n        nth_areaNm: text,\n        nth_areaType: moduleType\n      });\n    });\n  });\n\n  // 타임딜\n  waitForElement('.timedeal', () => {\n    document.querySelectorAll('.timedeal').forEach(section => {\n      const title = section.querySelector('.custom-module__header> h2');\n      const text = title ? title.innerText : '';\n      const modulePos = section.querySelector('[data-timedeal-index]') ? Math.floor(section.querySelector('[data-timedeal-index]').dataset.timedealIndex) + 1 : '';\n      observeTargets({\n        nth_pageId: location.pathname,\n        css: '.timedeal',\n        nth_areaNm: text,\n        nth_areaNo: modulePos\n      });\n    });\n  });\n    \n  // 랭킹 키워드\n  waitForElement('section.ranking-keyword', () => {\n    const title = document.querySelector('section > div.ranking-keyword__top > h2');\n    const text = title ? title.innerText : '';\n    observeTargets({\n      nth_pageId: '/main/ranking',\n      css: 'section.ranking-keyword',\n      nth_areaNm: text\n    });\n  });\n\n  // 랭킹 카테고리 - 최초 로딩된 영역 감지\n  waitForElement('div.ranking__category', () => {\n    observeTargets({\n      nth_pageId: '/main/ranking',\n      css: 'div.ranking__category',\n      nth_areaNm: '카테고리'\n    }, 0.1); // 낮은 threshold\n  });\n  }\n\n  // 무한 스크롤 추가 영역 자동 감지 등록\n  const infiniteObserver = new MutationObserver((mutations) => {\n    mutations.forEach(m => {\n      [...m.addedNodes].forEach(n => {\n        if (n.nodeType === 1 && n.matches && n.matches('div.ranking__category')) {\n          // console.log('NTH TEST >> 무한스크롤 카테고리 추가 감지됨');\n          observeTargets({\n            nth_pageId: '/main/ranking',\n            css: 'div.ranking__category',\n            nth_areaNm: '카테고리'\n          }, 0.1);\n        }\n      });\n    });\n  });\n  infiniteObserver.observe(document.body, { childList: true, subtree: true });\n\n  function observeTargets(e, threshold = impressionRate) {\n    const targets = document.querySelectorAll(e.css);\n\n    if (targets.length === 0) {\n      // console.log(`NTH TEST >> 감지 대상 없음: ${e.css}`);\n      return;\n    }\n\n    // console.log(`NTH TEST >> 감지 대상 ${targets.length}개 발견: ${e.css}`);\n\n    const shouldObserve = (e.nth_pageId === '' || location.pathname === e.nth_pageId || location.pathname.match('sub/sub_main_a'));\n    if (!shouldObserve) {\n      // console.log(`NTH TEST >> 페이지 경로 불일치: 현재(${location.pathname}) vs 기대(${e.nth_pageId})`);\n    }\n\n    const io = new IntersectionObserver((entries, observer) => {\n      for (const entry of entries) {\n        if (entry.isIntersecting && isActuallyVisible(entry.target, threshold)) {\n          if (entry.target.dataset.impressed === 'true') return;\n          entry.target.dataset.impressed = 'true';\n\n          const elTitle = entry.target.querySelector('.custom-module__header h2');\n          const title = elTitle ? elTitle.innerText.replace(/\\s+/g, ' ').trim() : '';\n\n          // console.log('NTH TEST >> 노출 감지됨:', {\n          //   nth_areaNm: title,\n          //   nth_areaType: e.nth_areaType,\n          //   nth_areaNo: e.nth_areaNo\n          // });\n\n          Ntm00002.Event.fireUserDefined(\"Scroll_Impression\", {\n            area_name: title || e.nth_areaNm,\n            area_type: e.nth_areaType,\n            area_no: e.nth_areaNo,\n            act_type: 'scroll'\n          });\n\n         !reimpression && observer.unobserve(entry.target);\n        }\n      }\n    }, {\n      threshold\n    });\n\n    targets.forEach(el => {\n      if (el.dataset.observed === 'true') return;\n      if (shouldObserve) {\n        // console.log(`NTH TEST >> observer 등록됨:`, el);\n        io.observe(el);\n      }\n      el.dataset.observed = 'true';\n    });\n  }\n\n  function waitForElement(selector, callback) {\n    if (document.querySelector(selector)) {\n      callback();\n      return;\n    }\n    const observer = new MutationObserver(() => {\n      if (document.querySelector(selector)) {\n        observer.disconnect();\n        callback();\n      }\n    });\n    observer.observe(document.body, { childList: true, subtree: true });\n  }\n  watchDog();\n  var newobserver = new MutationObserver(function(mutationList, ob){\n    for(var mutation of mutationList){\n      mutation.addedNodes.forEach(function (node) {\n          if (node.nodeType === Node.ELEMENT_NODE && (node.matches('.custom-module, .timedeal'))){\n            clearTimeout(timeout);\n            timeout = setTimeout(() => {\n              watchDog();\n            }, 500);\n          }\n      });\n    }\n  });\n  newobserver.observe(document.body, {childList: true, subtree: true}); \n}",
+    "description": "스크롤 시 노출되는 영역 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Banner Impression",
+    "tag_name": "Banner Impression",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 8,
+    "enabled": true,
+    "func_js": "function func() {\n  var reimpression = true; // true: 노출마다 감지, false: 최초 1회만 감지\n  var impressionRate = 0.7; // 화면 노출 비율\n  const imElements = {{AL_impression}};\n\n  console.log('NTH TEST >> impression detect start');\n\n  function nth_replace(tmp) {\n    tmp = tmp.replace(/\\s\\s+/g, \" \");\n    tmp = tmp.replace(/&gt;/g, '');\n    tmp = tmp.replace(/\\n|\\t/g, \" \").trim();\n    if (tmp && tmp.length > 100) {\n      tmp = tmp.substring(0, 97) + '...';\n    }\n    return tmp;\n  }\n  \n  // ✅ auto 여부에 따라 title 처리 방식 분기\n  function imTitle(el, isAuto) {\n    if (isAuto) {\n      const slides = el.querySelectorAll('.swiper-slide');\n      const titles = [];\n      var title = '';\n\n      slides.forEach(slide => {\n        let t = '';\n        if (slide.querySelector('h2')) {\n          t = slide.querySelector('h2').innerText;\n        }else if (slide.closest('[data-value]')){\n          t = slide.closest('[data-value]').dataset.value;\n        }\n        if (t) titles.push(nth_replace(t));\n      });\n      title = titles.join('___');\n      return title;\n      \n    } else {\n      title = el.innerText;\n      if (el.querySelector('img')) title = el.querySelector('img').alt;\n      if (el.querySelector('h2')) title = el.querySelector('h2').innerText;\n      return nth_replace(title);\n    }\n  }\n\n  function imUrl(el, isAuto) {\n    if (isAuto) {\n      let slides = el.querySelectorAll('.swiper-slide');\n      if (slides.length === 0) {\n        slides = el.querySelectorAll('.top-banner__slide');\n      }\n      if (el.querySelector('[data-main-popup-url]')) {\n        slides = el.querySelectorAll('[data-main-popup-url]');\n      }\n      if (el.querySelector('[data-landing-url]')) {\n        slides = el.querySelectorAll('[data-landing-url]');\n      }\n      const urls = [];\n      \n      slides.forEach(slide => {\n        let t = '';\n        if (slide.matches('[data-main-popup-url]')) {\n          t = slide.dataset.mainPopupUrl;\n        } else if (slide.matches('[data-landing-url]')) {\n          t = slide.dataset.landingUrl;\n        } else if (slide.querySelector('a')) {\n          t = slide.querySelector('a').href;\n        } else if (slide.dataset) {\n          t = slide.dataset.value;\n        }\n        if (t) urls.push(t);\n      });\n      return urls.join('___');\n    } else {\n      let url = '';\n      if (el.querySelector('[data-landing-url]')){\n        url = el.querySelector('[data-landing-url]').dataset.landingUrl;\n      } else if (el.querySelector('a')) {\n        url = el.querySelector('a').href;\n      }\n      return url;\n    }\n  }\n\n  function imOrder(el) {\n      const bannerSlideItem = el.closest('.top-banner__swiper, .event__item');\n      if (bannerSlideItem) {\n        const wrapper = bannerSlideItem.closest('.swiper-wrapper, .event__list');\n        if (!wrapper) return '';\n        const items = Array.from(wrapper.querySelectorAll('.top-banner__slide, .event__item'));\n        const index = items.indexOf(bannerSlideItem) + 1;\n        return index;\n      }\n  }\n  function imbOrder(el, isAuto) {\n      if (isAuto) {\n        const slides = el.querySelectorAll('.top-banner__slide, [data-swiper-slide-index]');\n        const kwds = [];\n    \n        slides.forEach(slide => {\n          let t = '';\n          if (slide.dataset) {\n            t = slide.dataset.swiperSlideIndex;\n            if (t){\n              t = Math.floor(t) + 1;\n            }\n          } \n          if (t) kwds.push(t);\n        });\n        return kwds.join('___');\n      } else {\n        // 수동 롤링 배너의 banner_order 있는 경우 해당 로직 변경\n        return '';\n      }\n  }\n  function imbId(el, isAuto) {\n    if (isAuto) {\n      let slides = el.querySelectorAll('.banner_id');\n\n      if (el.dataset.id === 'mainpop'){\n        return el.dataset.mainpopId;\n      } else{\n        if (slides.length === 0) {\n          slides = el.querySelectorAll('.top-banner__slide');\n        }\n        if (slides.length === 0) {\n          slides = el.querySelectorAll('[data-main-popup-id]');\n        }\n        if (slides.length === 0) {\n          slides = el.querySelectorAll('[data-ranking-bannder-id]');\n        }\n      }\n      const ids = [];\n      slides.forEach(slide => {\n        let t = '';\n        if (slide.dataset) {\n          t = slide.dataset.bannerId || slide.dataset.seq || slide.dataset.mainPopupId || slide.dataset.rankingBannderId;\n        } \n        if (t) ids.push(t);\n      });\n      return ids.join('___');\n    } else {\n      let bid = '';\n      if (el.querySelector('.banner_id')) {\n        bid = el.querySelector('.banner_id').dataset.bannerId; \n      } \n      else if (el.dataset.commbarId){\n        bid = el.dataset.commbarId;\n       }\n      return bid;\n    }\n  }\n  function imeId(el, isAuto) {\n    if (isAuto) {\n      const slides = el.querySelectorAll('.event__item');\n      const ids = [];\n  \n      slides.forEach(slide => {\n        let t = '';\n        if (slide.dataset) {\n          t = slide.dataset.eventId;\n        } \n        if (t) ids.push(t);\n      });\n      return ids.join('___');\n    } else {\n      let eid = '';\n      if (el.querySelector('.event__item')) eid = el.querySelector('.event__item').dataset.eventId;\n      if (el.closest('.event__item')) eid = el.closest('.event__item').dataset.eventId;\n      return eid;\n    }\n  }\n  function imKwd(el, isAuto) {\n    if (isAuto) {\n      const slides = el.querySelectorAll('.top-banner__slide');\n      const kwds = [];\n  \n      slides.forEach(slide => {\n        let t = '';\n        if (slide.dataset) {\n          t = slide.dataset.displaySearchKeyword;\n        } \n        if (t) kwds.push(t);\n      });\n      return kwds.join('___');\n    } else {\n      let kwd = '';\n      // 단일값 필요한 요소 있을 시 작성 필요\n      return kwd;\n    }\n  }\n\n// 추가 부분\nfunction imDataId(el, isAuto) {\n  if (isAuto) {\n      let slides = el.querySelectorAll('.rolling-banner__item');\n      if (el.querySelector('[data-id=\"ad-rolling-banner-nestads-ad\"]')) {\n        slides = el.querySelectorAll('[data-id=\"ad-rolling-banner-nestads-ad\"]');\n      }\n      const dataids = [];\n  \n      slides.forEach(slide => {\n        let t = '';\n        if (slide.dataset) {\n          t = slide.dataset.id;\n        } \n        if (t) dataids.push(t);\n      });\n      return dataids.join('___');\n  } else {\n    let dataId = '';\n    if (el.dataset.id) {\n      dataId = el.dataset.id;\n    }\n    return dataId;\n  }\n}\n\n  const elementMeta = new Map();         // element → imElement 설정 (auto 포함)\n  const alreadyObserved = new Set();     // 중복 방지\n\n  const io = new IntersectionObserver((entries) => {\n    for (const entry of entries) {\n      if (entry.isIntersecting) {\n        const config = elementMeta.get(entry.target);\n        const bname = imTitle(entry.target, config? config.auto : false);\n        const url = imUrl(entry.target, config? config.auto : false);\n        const order = imOrder(entry.target);\n        let bid = imbId(entry.target, config? config.auto : false);\n        let eid = imeId(entry.target, config? config.auto : false);\n        let bannertype = entry.target.closest('.commerce-popup__swiper') ? '팝업 배너' : '배너';\n        let did = imDataId(entry.target, config? config.auto : false);    // 추가 부분\n        let rcmd_kwd = imKwd(entry.target, config? config.auto : false);\n        const banner_order = imbOrder(entry.target, config? config.auto: false);\n        \n        Ntm00002.Event.fireUserDefined(\"impression\", {\n          act_type: 'impression',\n          exh_name: bname,\n          exh_url: url,\n          order: order,\n          banner_order: banner_order,\n          impression_type: config.impression_type,\n          banner_position : config.position,\n          banner_id : bid,\n          event_id : eid,\n          banner_type : bannertype,\n          data_id: did,  // 추가 부분\n          rcmd_kwd: rcmd_kwd\n        });\n\n        if (!reimpression) {\n          io.unobserve(entry.target);\n        }\n      }\n    }\n  }, { threshold: impressionRate });\n\n  // 초기 DOM 요소에 대해 감지 등록\n  imElements.forEach(e => {\n    if (location.pathname === e.page_id) {\n      try {\n        const targets = document.querySelectorAll(e.css);\n        targets.forEach(el => {\n          if (el.classList.contains('is-end')) return;\n          if (!alreadyObserved.has(el)) {\n            elementMeta.set(el, e);\n            io.observe(el);\n            console.log('NTH TEST >> impression detect 1:', e.css, el);\n            alreadyObserved.add(el);\n          }\n        });\n      } catch (err) {\n        // console.warn('NTH TEST >> Initial selector error:', e.css, err);\n      }\n    }\n  });\n\n  // DOM 생성 감지용 MutationObserver\n  const body = document.querySelector(\"body\");\n  const newobserver = new MutationObserver(function (mutationList) {\n    for (const mutation of mutationList) {\n      mutation.addedNodes.forEach(function (node) {\n        if (node.nodeType === Node.ELEMENT_NODE) {\n          imElements.forEach(function (e) {\n            if (location.pathname === e.page_id) {\n              let targets = [];\n\n              try {\n                if (typeof node.matches === 'function' && node.matches(e.css)) {\n                  targets = [node];\n                } else if (typeof node.querySelectorAll === 'function') {\n                  targets = Array.from(node.querySelectorAll(e.css));\n                }\n\n                targets.forEach(el => {\n                  if (!alreadyObserved.has(el)) {\n                    elementMeta.set(el, e);\n                    io.observe(el);\n                    console.log('NTH TEST >> impression detect 2:', e.css, el);\n                    alreadyObserved.add(el);\n                  }\n                });\n              } catch (err) {\n                // console.warn('NTH TEST >> Selector error in mutation observer:', e.css, err);\n              }\n            }\n          });\n        }\n      });\n    }\n  });\n\n  newobserver.observe(body, { childList: true, subtree: true });\n  // window.onload = func;\n}\n\n",
+    "description": "배너 노출 감지\nbanner_text에는 img태그의 alt값은 잡지 않음 (6/20 이미정 책임님 요청) ",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "search_key press detect",
+    "tag_name": "search_key press detect",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 9,
+    "enabled": true,
+    "func_js": "function func() {\n    const input = document.querySelector('.search-header__input');\n    if (!input) return;\n  \n    input.addEventListener('keydown', (e) => {\n      if (e.key === 'Enter') {\n        // console.log('NTH TEST >> Enter detect');\n        const srch_kwd = input.value || input.placeholder;\n        // sessionStorage.removeItem('nth_search_tabName');\n        Ntm00002.Event.fireUserDefined(\"enter\", \n                               { act_type: \"click\",\n                                 srch_kwd: srch_kwd\n                               });\n      }\n    });\n}",
+    "description": "검색창 enter key 입력 감지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "search btn click (touchend)",
+    "tag_name": "search btn click (touchend)",
+    "tag_type": "script",
+    "triggers": [
+      "DOM_READY"
+    ],
+    "trigger_code": "DOM_READY",
+    "exec_order": 10,
+    "enabled": true,
+    "func_js": "function func() {\n\n  document.addEventListener('touchend', function(e) {\n      handler(e.target);\n  });\n\n  function handler(el) {\n     console.log('NTMOBJ TEST >> touchend');\n    if (!location.href.includes('search')) {\n      return;\n    }\n    if (el.className === '.search-header__icon-search' || el.closest('.search-header__icon-search')) {\n      // 돋보기 버튼\n      const input = document.querySelector('.search-header__input');\n      const kwd = input && (input.value || input.placeholder);\n      const recent_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic-date > button.related-search__link');\n      const recent_kwd_list = Array.from(recent_kwdArr).map(el => el.innerText.trim()).join('___');\n      const auto_kwdArr = document.querySelectorAll('.related-search__keywords .related-search__item .related-search__keyword');\n      const auto_kwd_list = Array.from(auto_kwdArr).map(el => el.innerText.trim()).join('___');\n      const tab_name =sessionStorage.getItem('nth_search_tabName') || '';\n      \n      Ntm00002.Event.fireUserDefined(\"click_touch\", { act_type: \"click\", \n                                                     click_type: '검색 아이콘', \n                                                     srch_kwd: kwd, \n                                                     recent_kwd_list: recent_kwd_list,\n                                                     auto_kwd_list: auto_kwd_list,\n                                                     tab_name: tab_name\n                                                    });\n    } else if (el.matches('.related-search__keyword, .related-search__link') && el.closest('.related-search__item--challenge, .related-search__item--basic')) {\n      // 연관검색어\n      // sessionStorage.removeItem('nth_search_tabName');\n      const click_text = el.innerText || '';\n      const kwd = document.querySelector('.search-header__input').value || '';\n      const recent_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic-date > button.related-search__link');\n      const recent_kwd_list = Array.from(recent_kwdArr).map(el => el.innerText.trim()).join('___');\n      \n      const auto_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic > button.related-search__link > .related-search__keyword, .related-search__item.related-search__item--challenge > button.related-search__link > .related-search__keyword');\n      const auto_kwd_list = Array.from(auto_kwdArr).map(el => el.innerText.trim()).join('___');;\n      const tagEl = el.querySelector('.related-search__type') ? el.querySelector('.related-search__type') :\n                      el.closest('.related-search__link') && el.closest('.related-search__link').querySelector('.related-search__type');\n      const kwd_tag = tagEl ? tagEl.innerText : '';\n      Ntm00002.Event.fireUserDefined(\"click_touch\", { act_type: \"click\", \n                                                click_type: '자동 완성 검색어',\n                                                click_text: click_text,\n                                                srch_kwd: kwd, \n                                                recent_kwd_list: recent_kwd_list,\n                                                auto_kwd_list: auto_kwd_list,\n                                                kwd_tag: kwd_tag\n                                              });\n    } else if (el.closest('.search-header__autocomplete-view')) {\n      // 연관검색어\n      // sessionStorage.removeItem('nth_search_tabName');\n      const click_text = el.innerText || '';\n      const kwd = document.querySelector('.search-header__input').value || '';\n      const recent_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic-date > button.related-search__link');\n      const recent_kwd_list = Array.from(recent_kwdArr).map(el => el.innerText.trim()).join('___');\n      \n      const auto_kwdArr = document.querySelectorAll('.search-header__autocomplete-keyword');\n      const auto_kwd_list = Array.from(auto_kwdArr).map(el => el.innerText.trim()).join('___');\n      const tagEl = el.closest('.search-header__autocomplete-view') && el.closest('.search-header__autocomplete-view').querySelector('span:nth-child(2)');\n      const kwd_tag = tagEl ? tagEl.innerText : '';\n      Ntm00002.Event.fireUserDefined(\"click_touch\", { act_type: \"click\", \n                                                click_type: '자동 완성 검색어',\n                                                click_text: click_text,\n                                                srch_kwd: kwd, \n                                                recent_kwd_list: recent_kwd_list,\n                                                auto_kwd_list: auto_kwd_list,\n                                                kwd_tag: kwd_tag\n                                              });\n    } else if (el.closest('.related-search__item.related-search__item--basic-date')) {\n      // 최근 검색어\n      // sessionStorage.removeItem('nth_search_tabName');\n      const click_text = el.innerText || '';\n      const kwd = document.querySelector('.search-header__input').value || '';\n      const recent_kwd = el.innerText || '';\n      const srch_dt = el.closest('.related-search__item').querySelector('.related-search__date') ? el.closest('.related-search__item').querySelector('.related-search__date').innerText : '';\n      const recent_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic-date > button.related-search__link');\n      const recent_kwd_list = Array.from(recent_kwdArr).map(el => el.innerText.trim()).join('___');\n      \n      const auto_kwdArr = document.querySelectorAll('.related-search__item.related-search__item--basic > button.related-search__link .related-search__keyword, .related-search__item--challenge > button.related-search__link .related-search__keyword');\n      const auto_kwd_list = Array.from(auto_kwdArr).map(el => el.innerText.trim()).join('___');\n      const tagEl = el.closest('.search-header__autocomplete-view') && el.closest('.search-header__autocomplete-view').querySelector('span:nth-child(2)');\n      const kwd_tag = tagEl ? tagEl.innerText : '';\n      Ntm00002.Event.fireUserDefined(\"click_touch\", { act_type: \"click\", \n                                                click_type: '최근 검색어',\n                                                click_text: click_text,\n                                                srch_kwd: kwd, \n                                                srch_dt : srch_dt,\n                                                recent_kwd: recent_kwd,\n                                                recent_kwd_list: recent_kwd_list,\n                                                auto_kwd_list: auto_kwd_list,\n                                                kwd_tag: kwd_tag\n                                              });\n    }else if (el.closest('.popular-keyword__date-box')) {\n      const click_text = el.innerText || '';\n      Ntm00002.Event.fireUserDefined(\"click_touch\", { act_type: \"click\", \n                                                click_type: '더보기',\n                                                click_text: click_text,\n                                                area_name: '인기'\n                                              });\n    } \n  }\n}",
+    "description": "다음 버튼들에 대한 touchend 이벤트 발생\n통합검색 검색 전 페이지 돋보기 버튼, 연관검색어 버튼",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "DOM_READY"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Detail Page Load",
+    "tag_name": "Detail Page Load",
+    "tag_type": "nlogger",
+    "triggers": [
+      "pv_detail(Custom)"
+    ],
+    "trigger_code": "pv_detail(Custom)",
+    "exec_order": 11,
+    "enabled": true,
+    "func_js": "",
+    "description": "상세 페이지 로드",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "pv_detail(Custom)"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "referer_url",
+        "value": "AL_referrer"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "react_cnt",
+        "value": "react_cnt"
+      },
+      {
+        "key": "total_price_origin",
+        "value": "total_price_origin"
+      },
+      {
+        "key": "total_price_disc",
+        "value": "total_price_disc"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "rrpay_point",
+        "value": "rrpay_point"
+      },
+      {
+        "key": "balso_s_money",
+        "value": "balso_s_money"
+      },
+      {
+        "key": "balso_cash",
+        "value": "balso_cash"
+      },
+      {
+        "key": "cart_prd_cnt",
+        "value": "cart_prd_cnt"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "ctgr_depth3",
+        "value": "ctgr_depth3"
+      },
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "coupon_cnt",
+        "value": "coupon_cnt"
+      },
+      {
+        "key": "balso_order_cnt",
+        "value": "balso_order_cnt"
+      },
+      {
+        "key": "cancel_exchange_return_cnt",
+        "value": "cancel_exchange_return_cnt"
+      },
+      {
+        "key": "restock_alert_cnt",
+        "value": "restock_alert_cnt"
+      },
+      {
+        "key": "like_prd_cnt",
+        "value": "like_prd_cnt"
+      },
+      {
+        "key": "like_store_cnt",
+        "value": "like_store_cnt"
+      },
+      {
+        "key": "will_convert_rrpay_point",
+        "value": "will_convert_rrpay_point"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "TAG",
+        "value": "tag"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "convert_rrpay_point",
+        "value": "convert_rrpay_point"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "order_no",
+        "value": "order_no"
+      },
+      {
+        "key": "total_delivery_price",
+        "value": "total_delivery_price"
+      },
+      {
+        "key": "use_rrpay_point",
+        "value": "use_rrppay_point"
+      },
+      {
+        "key": "reviewer_review_cnt",
+        "value": "reviewer_review_cnt"
+      },
+      {
+        "key": "reviewer_good_cnt",
+        "value": "reviewer_good_cnt"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      },
+      {
+        "key": "FLAG",
+        "value": "FLAG"
+      },
+      {
+        "key": "delivery_price",
+        "value": "delivery_price"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "nth_sdk",
+    "tag_name": "nth_sdk",
+    "tag_type": "nlogger",
+    "triggers": [
+      "pv(Custom)"
+    ],
+    "trigger_code": "pv(Custom)",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "pv(Custom)"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "referer_url",
+        "value": "AL_referrer"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "order_no",
+        "value": "order_no"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "TAG",
+        "value": "tag"
+      },
+      {
+        "key": "FLAG",
+        "value": "FLAG"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Page Load",
+    "tag_name": "Page Load",
+    "tag_type": "nlogger",
+    "triggers": [
+      "pv(Custom)"
+    ],
+    "trigger_code": "pv(Custom)",
+    "exec_order": 12,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": true,
+    "run_conditions": [
+      {
+        "trigger_code": "pv(Custom)"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "referer_url",
+        "value": "AL_referrer"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "order_no",
+        "value": "order_no"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "TAG",
+        "value": "tag"
+      },
+      {
+        "key": "FLAG",
+        "value": "FLAG"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Page Load_페이설정페이지",
+    "tag_name": "",
+    "tag_type": "nlogger",
+    "triggers": [
+      "URL 주소 변경_페이설정페이지"
+    ],
+    "trigger_code": "URL 주소 변경_페이설정페이지",
+    "exec_order": 13,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "URL 주소 변경_페이설정페이지"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "referer_url",
+        "value": "AL_referrer"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "ctgr_name_m",
+        "value": "ctgr_depth2"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Scroll Event",
+    "tag_name": "Scroll Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Scroll Event"
+    ],
+    "trigger_code": "Scroll Event",
+    "exec_order": 14,
+    "enabled": true,
+    "func_js": "",
+    "description": "custom event scroll 발생 시 태그 발동",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Scroll Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "scroll_rate",
+        "value": "scroll_rate"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Swipe Event",
+    "tag_name": "Swipe Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Swipe Event"
+    ],
+    "trigger_code": "Swipe Event",
+    "exec_order": 15,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Swipe Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "swipe_area",
+        "value": "swipe_area"
+      },
+      {
+        "key": "swipe_direct",
+        "value": "swipe_direct"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "el_name",
+        "value": "el_name"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "news_seq",
+        "value": "news_seq"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Popup Event",
+    "tag_name": "Popup Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Popup Event"
+    ],
+    "trigger_code": "Popup Event",
+    "exec_order": 16,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Popup Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "popup_msg",
+        "value": "popup_msg"
+      },
+      {
+        "key": "popup_type",
+        "value": "popup_type"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "popup_title",
+        "value": "popup_title"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "step_cnt",
+        "value": "step_cnt"
+      },
+      {
+        "key": "step_interval",
+        "value": "step_interval"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Scroll_Impression Event",
+    "tag_name": "Scroll_Impression Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Scroll Impression Event"
+    ],
+    "trigger_code": "Scroll Impression Event",
+    "exec_order": 17,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Scroll Impression Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_type",
+        "value": "area_type"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Banner impression Event",
+    "tag_name": "Banner impression Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Banner Impression Event"
+    ],
+    "trigger_code": "Banner Impression Event",
+    "exec_order": 18,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Banner Impression Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "impression_type",
+        "value": "impression_type"
+      },
+      {
+        "key": "event_id",
+        "value": "event_id"
+      },
+      {
+        "key": "event_name",
+        "value": "event_name"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "pupup Click Event(main)",
+    "tag_name": "pupup Click Event(main)",
+    "tag_type": "nlogger",
+    "triggers": [
+      "main popup click"
+    ],
+    "trigger_code": "main popup click",
+    "exec_order": 19,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "main popup click"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "custom",
+    "log_type_path": "popup_click",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "prd_option",
+        "value": "prd_option"
+      },
+      {
+        "key": "popup_title",
+        "value": "popup_title"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "popup_msg",
+        "value": "popup_msg"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "TAG",
+        "value": "tag"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click  img Event",
+    "tag_name": "Click  img Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "click_img"
+    ],
+    "trigger_code": "click_img",
+    "exec_order": 20,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "click_img"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "custom",
+    "log_type_path": "img",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "srch_kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_position",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "exh_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feedSeq",
+        "value": "feed_id"
+      },
+      {
+        "key": "profileSeq",
+        "value": "feed_writer"
+      },
+      {
+        "key": "challengeName",
+        "value": "chal_name"
+      },
+      {
+        "key": "challengeSeq",
+        "value": "chal_id"
+      },
+      {
+        "key": "mainTitle",
+        "value": "prom_word"
+      },
+      {
+        "key": "activeParticipantCount",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "sticker",
+        "value": "sticker"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click Like Event",
+    "tag_name": "Click Like Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Click LikeBtn Event"
+    ],
+    "trigger_code": "Click LikeBtn Event",
+    "exec_order": 21,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Click LikeBtn Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_order",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "ctgr_depth3",
+        "value": "ctgr_depth3"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "list_order",
+        "value": "list_order"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click  div Event",
+    "tag_name": "Click  div Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Click_div[role]"
+    ],
+    "trigger_code": "Click_div[role]",
+    "exec_order": 22,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Click_div[role]"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "srch_kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_position",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "exh_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feed_id",
+        "value": "feed_id"
+      },
+      {
+        "key": "feed_writer",
+        "value": "feed_writer"
+      },
+      {
+        "key": "chal_name",
+        "value": "chal_name"
+      },
+      {
+        "key": "chal_id",
+        "value": "chal_id"
+      },
+      {
+        "key": "prom_word",
+        "value": "prom_word"
+      },
+      {
+        "key": "chal_join_cnt",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "stick_text",
+        "value": "sticker"
+      },
+      {
+        "key": "list_order",
+        "value": "list_order"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "reviewer_review_cnt",
+        "value": "reviewer_review_cnt"
+      },
+      {
+        "key": "reviewer_good_cnt",
+        "value": "reviewer_good_cnt"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "cart_prd_cnt",
+        "value": "cart_prd_cnt"
+      },
+      {
+        "key": "order_no",
+        "value": "order_no"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click div Event_whistle",
+    "tag_name": "Click div Event_whistle",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Click_div_whistle_wash"
+    ],
+    "trigger_code": "Click_div_whistle_wash",
+    "exec_order": 23,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Click_div_whistle_wash"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "kwd_text",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_name",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_order",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "exh_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feedSeq",
+        "value": "feed_id"
+      },
+      {
+        "key": "profileSeq",
+        "value": "feed_writer"
+      },
+      {
+        "key": "challengeName",
+        "value": "chal_name"
+      },
+      {
+        "key": "challengeSeq",
+        "value": "chal_id"
+      },
+      {
+        "key": "mainTitle",
+        "value": "prom_word"
+      },
+      {
+        "key": "activeParticipantCount",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "sticker",
+        "value": "sticker"
+      },
+      {
+        "key": "cta_text",
+        "value": "cta_text"
+      },
+      {
+        "key": "react_cnt",
+        "value": "react_cnt"
+      },
+      {
+        "key": "ctgr_name_m",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "TAG",
+        "value": "activeTag"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click tab Event",
+    "tag_name": "Click tab Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Click commerce tab Event"
+    ],
+    "trigger_code": "Click commerce tab Event",
+    "exec_order": 24,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Click commerce tab Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "default",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "rank",
+        "value": "rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "srch_kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_order",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feed_id",
+        "value": "feed_id"
+      },
+      {
+        "key": "feed_writer",
+        "value": "feed_writer"
+      },
+      {
+        "key": "chal_name",
+        "value": "chal_name"
+      },
+      {
+        "key": "chal_id",
+        "value": "chal_id"
+      },
+      {
+        "key": "prom_word",
+        "value": "prom_word"
+      },
+      {
+        "key": "chal_join_cnt",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "stick_text",
+        "value": "sticker"
+      },
+      {
+        "key": "cta_text",
+        "value": "cta_text"
+      },
+      {
+        "key": "react_cnt",
+        "value": "react_cnt"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "el_name",
+        "value": "el_name"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "list_order",
+        "value": "list_order"
+      },
+      {
+        "key": "total_price_origin",
+        "value": "total_price_origin"
+      },
+      {
+        "key": "total_price_disc",
+        "value": "total_price_disc"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "srch_dt",
+        "value": "srch_dt"
+      },
+      {
+        "key": "step_cnt",
+        "value": "step_cnt"
+      },
+      {
+        "key": "rrpay_point",
+        "value": "rrpay_point"
+      },
+      {
+        "key": "balso_cash",
+        "value": "balso_cash"
+      },
+      {
+        "key": "balso_s_money",
+        "value": "balso_s_money"
+      },
+      {
+        "key": "use_rrppay_point",
+        "value": "use_rrppay_point"
+      },
+      {
+        "key": "prd_option",
+        "value": "prd_option"
+      },
+      {
+        "key": "is_ad",
+        "value": "is_ad"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "ctgr_depth3",
+        "value": "ctgr_depth3"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "kwd_tag",
+        "value": "kwd_tag"
+      },
+      {
+        "key": "cart_prd_cnt",
+        "value": "cart_prd_cnt"
+      },
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "coupon_cnt",
+        "value": "coupon_cnt"
+      },
+      {
+        "key": "balso_order_cnt",
+        "value": "balso_order_cnt"
+      },
+      {
+        "key": "cancel_exchange_return_cnt",
+        "value": "cancel_exchange_return_cnt"
+      },
+      {
+        "key": "restock_alert_cnt",
+        "value": "restock_alert_cnt"
+      },
+      {
+        "key": "like_prd_cnt",
+        "value": "like_prd_cnt"
+      },
+      {
+        "key": "like_store_cnt",
+        "value": "like_store_cnt"
+      },
+      {
+        "key": "total_delivery_price",
+        "value": "total_delivery_price"
+      },
+      {
+        "key": "order_dt",
+        "value": "order_dt"
+      },
+      {
+        "key": "news_seq",
+        "value": "news_seq"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "will_convert_rrpay_point",
+        "value": "will_convert_rrpay_point"
+      },
+      {
+        "key": "event_id",
+        "value": "event_id"
+      },
+      {
+        "key": "event_name",
+        "value": "event_name"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "use_rrpay_point",
+        "value": "use_rrpay_point"
+      },
+      {
+        "key": "recent_kwd",
+        "value": "recent_kwd"
+      },
+      {
+        "key": "delivery_price",
+        "value": "delivery_price"
+      },
+      {
+        "key": "reviewer_review_cnt",
+        "value": "reviewer_review_cnt"
+      },
+      {
+        "key": "reviewer_good_cnt",
+        "value": "reviewer_good_cnt"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      },
+      {
+        "key": "cta_id",
+        "value": "cta_id"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_os",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Click Event",
+    "tag_name": "Click Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "CLICK_EVENT",
+      "enter key press",
+      "click touchend"
+    ],
+    "trigger_code": "CLICK_EVENT",
+    "exec_order": 25,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "CLICK_EVENT"
+      },
+      {
+        "trigger_code": "enter key press"
+      },
+      {
+        "trigger_code": "click touchend"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "beacon",
+    "log_type": "custom",
+    "log_type_path": "testclick",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "rank",
+        "value": "rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "srch_kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_order",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feed_id",
+        "value": "feed_id"
+      },
+      {
+        "key": "feed_writer",
+        "value": "feed_writer"
+      },
+      {
+        "key": "chal_name",
+        "value": "chal_name"
+      },
+      {
+        "key": "chal_id",
+        "value": "chal_id"
+      },
+      {
+        "key": "prom_word",
+        "value": "prom_word"
+      },
+      {
+        "key": "chal_join_cnt",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "stick_text",
+        "value": "sticker"
+      },
+      {
+        "key": "cta_text",
+        "value": "cta_text"
+      },
+      {
+        "key": "react_cnt",
+        "value": "react_cnt"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "el_name",
+        "value": "el_name"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "list_order",
+        "value": "list_order"
+      },
+      {
+        "key": "total_price_origin",
+        "value": "total_price_origin"
+      },
+      {
+        "key": "total_price_disc",
+        "value": "total_price_disc"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "srch_dt",
+        "value": "srch_dt"
+      },
+      {
+        "key": "step_cnt",
+        "value": "step_cnt"
+      },
+      {
+        "key": "rrpay_point",
+        "value": "rrpay_point"
+      },
+      {
+        "key": "balso_cash",
+        "value": "balso_cash"
+      },
+      {
+        "key": "balso_s_money",
+        "value": "balso_s_money"
+      },
+      {
+        "key": "use_rrppay_point",
+        "value": "use_rrppay_point"
+      },
+      {
+        "key": "prd_option",
+        "value": "prd_option"
+      },
+      {
+        "key": "is_ad",
+        "value": "is_ad"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "ctgr_depth3",
+        "value": "ctgr_depth3"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "kwd_tag",
+        "value": "kwd_tag"
+      },
+      {
+        "key": "cart_prd_cnt",
+        "value": "cart_prd_cnt"
+      },
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "coupon_cnt",
+        "value": "coupon_cnt"
+      },
+      {
+        "key": "balso_order_cnt",
+        "value": "balso_order_cnt"
+      },
+      {
+        "key": "cancel_exchange_return_cnt",
+        "value": "cancel_exchange_return_cnt"
+      },
+      {
+        "key": "restock_alert_cnt",
+        "value": "restock_alert_cnt"
+      },
+      {
+        "key": "like_prd_cnt",
+        "value": "like_prd_cnt"
+      },
+      {
+        "key": "like_store_cnt",
+        "value": "like_store_cnt"
+      },
+      {
+        "key": "total_delivery_price",
+        "value": "total_delivery_price"
+      },
+      {
+        "key": "order_dt",
+        "value": "order_dt"
+      },
+      {
+        "key": "news_seq",
+        "value": "news_seq"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "will_convert_rrpay_point",
+        "value": "will_convert_rrpay_point"
+      },
+      {
+        "key": "event_id",
+        "value": "event_id"
+      },
+      {
+        "key": "event_name",
+        "value": "event_name"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "use_rrpay_point",
+        "value": "use_rrpay_point"
+      },
+      {
+        "key": "recent_kwd",
+        "value": "recent_kwd"
+      },
+      {
+        "key": "delivery_price",
+        "value": "delivery_price"
+      },
+      {
+        "key": "reviewer_review_cnt",
+        "value": "reviewer_review_cnt"
+      },
+      {
+        "key": "reviewer_good_cnt",
+        "value": "reviewer_good_cnt"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      },
+      {
+        "key": "cta_id",
+        "value": "cta_id"
+      },
+      {
+        "key": "popup_title",
+        "value": "popup_title"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "withdraw_reason",
+        "value": "withdraw_reason"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "withdraw_check_cnt",
+        "value": "withdraw_check_cnt"
+      },
+      {
+        "key": "recent_kwd_list",
+        "value": "recent_kwd_list"
+      },
+      {
+        "key": "auto_kwd_list",
+        "value": "auto_kwd_list"
+      },
+      {
+        "key": "total_quantity",
+        "value": "total_quantity"
+      },
+      {
+        "key": "popup_msg",
+        "value": "popup_msg"
+      },
+      {
+        "key": "true_list",
+        "value": "true_list"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "el_cnt",
+        "value": "el_cnt"
+      },
+      {
+        "key": "step_interval",
+        "value": "step_interval"
+      },
+      {
+        "key": "push_code",
+        "value": "push_code"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_os",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Tab-item page detect",
+    "tag_name": "Tab-item page detect",
+    "tag_type": "script",
+    "triggers": [
+      "tab-item  click"
+    ],
+    "trigger_code": "tab-item  click",
+    "exec_order": 26,
+    "enabled": true,
+    "func_js": "function func() {\n  var prd_brand = '';\n  var prd_code = '';\n  let tab_name = '';\n  let srch_kwd = '';\n\n   if ( location.pathname.match('product/detail') &&  document.querySelector('.prod-item__display-name') ){\n     // 상품 상세 페이지\n     var prdel = document.querySelector('.prod-item__display-name').parentElement;\n     prd_brand = prdel.querySelector('div > p') ? prdel.querySelector('div > p').innerText: '';\n     prd_code = window.location.href.split(\"/\").pop();\n   } else if (location.pathname.match('/search') && document.querySelector('.search-result__tab')) {\n     // 검색 결과 페이지\n      const saveTab = sessionStorage.getItem(\"nth_search_tabName\");\n      tab_name = document.querySelector('button > div.is-selected > span') ? document.querySelector('button > div.is-selected > span').innerText : '';\n      const inputEl = document.querySelector('.search-header__input') ? document.querySelector('.search-header__input') : null;\n      if (inputEl) {\n          srch_kwd = inputEl.value || inputEl.placeholder;\n      }\n   }else{\n       tab_name = document.querySelector('.tab-label.is-selected') && document.querySelector('.tab-label.is-selected').innerText;\n   }\n  timeout = setTimeout(() => {\n   Ntm00002.Event.fireUserDefined(\"pvDetail\",{ act_type: \"pageview\",\n                                               prd_code: prd_code,\n                                               prd_brand: prd_brand,\n                                               tab_name: tab_name,\n                                               srch_kwd: srch_kwd\n                                             });\n  },300);\n\n}",
+    "description": "탭 클릭 시 pv 발생 태그\n상품 상세 페이지, 검색 결과 페이지에서 작동",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "tab-item  click"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "filter 처리",
+    "tag_name": "filter 처리",
+    "tag_type": "script",
+    "triggers": [
+      "filter 처리"
+    ],
+    "trigger_code": "filter 처리",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "function func() {\nconsole.log('필터 처리');   // return 0;\n}",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "filter 처리"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Click review",
+    "tag_name": "Click review",
+    "tag_type": "nlogger",
+    "triggers": [
+      "Click review item"
+    ],
+    "trigger_code": "Click review item",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "Click review item"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "defer",
+    "log_type": "default",
+    "log_type_path": "",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  },
+  {
+    "tag_code": "Page Load_수동로깅",
+    "tag_name": "Page Load_수동로깅",
+    "tag_type": "script",
+    "triggers": [
+      "button washBooking"
+    ],
+    "trigger_code": "button washBooking",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "function func() {\n  setTimeout(() => {\n    Ntm00002.Event.fireUserDefined(\"pv\", { act_type: \"pageview\" });\n  }, 700);\n}",
+    "description": "세차예약 최종완료페이지 등 클릭을 트리거로 잡아야하는 페이지(URL 변경 전혀 없음)",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "button washBooking"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Page Load_혜택카드상세페이지",
+    "tag_name": "Page Load_혜택카드상세페이지",
+    "tag_type": "script",
+    "triggers": [
+      "URL 주소 변경_혜택카드상세페이지"
+    ],
+    "trigger_code": "URL 주소 변경_혜택카드상세페이지",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "function func() {\n  setTimeout(() => {\n    var exhname = '';\n    exhname = document.querySelector('.page-title')? document.querySelector('.page-title').innerText :'';\n    Ntm00002.Event.fireUserDefined(\"pvDetail\", { act_type: \"pageview\", \n                                                 exh_name : exhname\n                                               });\n  }, 1000);\n}",
+    "description": "# 페이 MASS 카드중개 이벤트 상세페이지 / URL 해시변경을 트리거로 잡아야하는 페이지",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "URL 주소 변경_혜택카드상세페이지"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Set_srch_kwd",
+    "tag_name": "Set_srch_kwd",
+    "tag_type": "script",
+    "triggers": [
+      "pv_detail(Custom)"
+    ],
+    "trigger_code": "pv_detail(Custom)",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "function func() {\n  if (location.pathname.match('/search/result')){\n    // console.log(\"스토어 검색결과 페이지 확인\");\n    const inputEl = document.querySelector('input.search-header__input');\n    if (inputEl) {\n      kwd = inputEl && inputEl.value ? inputEl.value : inputEl.getAttribute('placeholder');\n      // console.log(\"스토어 검색결과 페이지 확인\", kwd);\n      sessionStorage.setItem('nth_srch_kwd', kwd);\n      // console.log(\"스토어 검색결과 페이지 확인\", kwd, \"저장\");\n    }\n  }\n}",
+    "description": "커머스 검색결과 페이지 로드 시 해당 페이지의 검색어를 sessionStorage 저장",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "pv_detail(Custom)"
+      }
+    ],
+    "except_conditions": []
+  },
+  {
+    "tag_code": "Click svg Event",
+    "tag_name": "Click svg Event",
+    "tag_type": "nlogger",
+    "triggers": [
+      "svg Click Event"
+    ],
+    "trigger_code": "svg Click Event",
+    "exec_order": 999,
+    "enabled": true,
+    "func_js": "",
+    "description": "",
+    "run_condition_any": false,
+    "run_conditions": [
+      {
+        "trigger_code": "svg Click Event"
+      }
+    ],
+    "except_conditions": [],
+    "send_method": "beacon",
+    "log_type": "custom",
+    "log_type_path": "testclick",
+    "parameters": [
+      {
+        "key": "channel",
+        "value": "channel"
+      },
+      {
+        "key": "page_url",
+        "value": "AL_url"
+      },
+      {
+        "key": "page_id",
+        "value": "page_id"
+      },
+      {
+        "key": "act_type",
+        "value": "act_type"
+      },
+      {
+        "key": "click_text",
+        "value": "click_text"
+      },
+      {
+        "key": "click_type",
+        "value": "click_type"
+      },
+      {
+        "key": "area_name",
+        "value": "area_name"
+      },
+      {
+        "key": "area_order",
+        "value": "area_order"
+      },
+      {
+        "key": "rank",
+        "value": "rank"
+      },
+      {
+        "key": "srch_kwd",
+        "value": "srch_kwd"
+      },
+      {
+        "key": "kwd_ctgr",
+        "value": "kwd_ctgr"
+      },
+      {
+        "key": "srch_kwd_type",
+        "value": "srch_kwd_type"
+      },
+      {
+        "key": "exh_id",
+        "value": "exh_id"
+      },
+      {
+        "key": "exh_name",
+        "value": "exh_name"
+      },
+      {
+        "key": "exh_tag",
+        "value": "exh_tag"
+      },
+      {
+        "key": "ctgr_id",
+        "value": "ctgr_id"
+      },
+      {
+        "key": "ctgr_depth1",
+        "value": "ctgr_depth1"
+      },
+      {
+        "key": "prd_code",
+        "value": "prd_code"
+      },
+      {
+        "key": "prd_name",
+        "value": "prd_name"
+      },
+      {
+        "key": "prd_brand",
+        "value": "prd_brand"
+      },
+      {
+        "key": "prd_price_origin",
+        "value": "prd_price_origin"
+      },
+      {
+        "key": "prd_price_final",
+        "value": "prd_price_final"
+      },
+      {
+        "key": "prd_disc_rate",
+        "value": "prd_disc_rate"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "prd_review_score",
+        "value": "prd_review_score"
+      },
+      {
+        "key": "prd_order",
+        "value": "prd_order"
+      },
+      {
+        "key": "prd_tag",
+        "value": "prd_tag"
+      },
+      {
+        "key": "prd_is_ad",
+        "value": "prd_is_ad"
+      },
+      {
+        "key": "prd_filter",
+        "value": "prd_filter"
+      },
+      {
+        "key": "order",
+        "value": "order"
+      },
+      {
+        "key": "tab_name",
+        "value": "tab_name"
+      },
+      {
+        "key": "card_name",
+        "value": "card_name"
+      },
+      {
+        "key": "card_id",
+        "value": "card_id"
+      },
+      {
+        "key": "card_title",
+        "value": "card_title"
+      },
+      {
+        "key": "card_text",
+        "value": "card_text"
+      },
+      {
+        "key": "banner_id",
+        "value": "banner_id"
+      },
+      {
+        "key": "banner_url",
+        "value": "banner_url"
+      },
+      {
+        "key": "banner_text",
+        "value": "banner_text"
+      },
+      {
+        "key": "el_order",
+        "value": "el_order"
+      },
+      {
+        "key": "module_id",
+        "value": "module_id"
+      },
+      {
+        "key": "module_name",
+        "value": "module_name"
+      },
+      {
+        "key": "module_order",
+        "value": "module_order"
+      },
+      {
+        "key": "banner_position",
+        "value": "banner_position"
+      },
+      {
+        "key": "list_name",
+        "value": "list_name"
+      },
+      {
+        "key": "article_id",
+        "value": "article_id"
+      },
+      {
+        "key": "article_title",
+        "value": "article_title"
+      },
+      {
+        "key": "feed_id",
+        "value": "feed_id"
+      },
+      {
+        "key": "feed_writer",
+        "value": "feed_writer"
+      },
+      {
+        "key": "chal_name",
+        "value": "chal_name"
+      },
+      {
+        "key": "chal_id",
+        "value": "chal_id"
+      },
+      {
+        "key": "prom_word",
+        "value": "prom_word"
+      },
+      {
+        "key": "chal_join_cnt",
+        "value": "chal_join_cnt"
+      },
+      {
+        "key": "stick_text",
+        "value": "sticker"
+      },
+      {
+        "key": "cta_text",
+        "value": "cta_text"
+      },
+      {
+        "key": "react_cnt",
+        "value": "react_cnt"
+      },
+      {
+        "key": "store_name",
+        "value": "store_name"
+      },
+      {
+        "key": "el_name",
+        "value": "el_name"
+      },
+      {
+        "key": "list_id",
+        "value": "list_id"
+      },
+      {
+        "key": "list_order",
+        "value": "list_order"
+      },
+      {
+        "key": "total_price_origin",
+        "value": "total_price_origin"
+      },
+      {
+        "key": "total_price_disc",
+        "value": "total_price_disc"
+      },
+      {
+        "key": "total_price_final",
+        "value": "total_price_final"
+      },
+      {
+        "key": "rcmd_kwd",
+        "value": "rcmd_kwd"
+      },
+      {
+        "key": "srch_dt",
+        "value": "srch_dt"
+      },
+      {
+        "key": "step_cnt",
+        "value": "step_cnt"
+      },
+      {
+        "key": "rrpay_point",
+        "value": "rrpay_point"
+      },
+      {
+        "key": "balso_cash",
+        "value": "balso_cash"
+      },
+      {
+        "key": "balso_s_money",
+        "value": "balso_s_money"
+      },
+      {
+        "key": "use_rrppay_point",
+        "value": "use_rrppay_point"
+      },
+      {
+        "key": "prd_option",
+        "value": "prd_option"
+      },
+      {
+        "key": "is_ad",
+        "value": "is_ad"
+      },
+      {
+        "key": "ctgr_depth2",
+        "value": "ctgr_depth2"
+      },
+      {
+        "key": "ctgr_depth3",
+        "value": "ctgr_depth3"
+      },
+      {
+        "key": "kwd_rank",
+        "value": "kwd_rank"
+      },
+      {
+        "key": "kwd_tag",
+        "value": "kwd_tag"
+      },
+      {
+        "key": "cart_prd_cnt",
+        "value": "cart_prd_cnt"
+      },
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "coupon_cnt",
+        "value": "coupon_cnt"
+      },
+      {
+        "key": "balso_order_cnt",
+        "value": "balso_order_cnt"
+      },
+      {
+        "key": "cancel_exchange_return_cnt",
+        "value": "cancel_exchange_return_cnt"
+      },
+      {
+        "key": "restock_alert_cnt",
+        "value": "restock_alert_cnt"
+      },
+      {
+        "key": "like_prd_cnt",
+        "value": "like_prd_cnt"
+      },
+      {
+        "key": "like_store_cnt",
+        "value": "like_store_cnt"
+      },
+      {
+        "key": "total_delivery_price",
+        "value": "total_delivery_price"
+      },
+      {
+        "key": "order_dt",
+        "value": "order_dt"
+      },
+      {
+        "key": "news_seq",
+        "value": "news_seq"
+      },
+      {
+        "key": "store_id",
+        "value": "store_id"
+      },
+      {
+        "key": "will_convert_rrpay_point",
+        "value": "will_convert_rrpay_point"
+      },
+      {
+        "key": "event_id",
+        "value": "event_id"
+      },
+      {
+        "key": "event_name",
+        "value": "event_name"
+      },
+      {
+        "key": "banner_order",
+        "value": "banner_order"
+      },
+      {
+        "key": "use_rrpay_point",
+        "value": "use_rrpay_point"
+      },
+      {
+        "key": "recent_kwd",
+        "value": "recent_kwd"
+      },
+      {
+        "key": "delivery_price",
+        "value": "delivery_price"
+      },
+      {
+        "key": "reviewer_review_cnt",
+        "value": "reviewer_review_cnt"
+      },
+      {
+        "key": "reviewer_good_cnt",
+        "value": "reviewer_good_cnt"
+      },
+      {
+        "key": "prd_review_id",
+        "value": "prd_review_id"
+      },
+      {
+        "key": "cta_id",
+        "value": "cta_id"
+      },
+      {
+        "key": "popup_title",
+        "value": "popup_title"
+      },
+      {
+        "key": "popup_id",
+        "value": "popup_id"
+      },
+      {
+        "key": "withdraw_reason",
+        "value": "withdraw_reason"
+      },
+      {
+        "key": "banner_type",
+        "value": "banner_type"
+      },
+      {
+        "key": "withdraw_check_cnt",
+        "value": "withdraw_check_cnt"
+      },
+      {
+        "key": "recent_kwd_list",
+        "value": "recent_kwd_list"
+      },
+      {
+        "key": "auto_kwd_list",
+        "value": "auto_kwd_list"
+      },
+      {
+        "key": "total_quantity",
+        "value": "total_quantity"
+      },
+      {
+        "key": "popup_msg",
+        "value": "popup_msg"
+      },
+      {
+        "key": "true_list",
+        "value": "true_list"
+      },
+      {
+        "key": "reward_price",
+        "value": "reward_price"
+      },
+      {
+        "key": "el_cnt",
+        "value": "el_cnt"
+      },
+      {
+        "key": "step_interval",
+        "value": "step_interval"
+      },
+      {
+        "key": "push_code",
+        "value": "push_code"
+      },
+      {
+        "key": "data_id",
+        "value": "data_id"
+      },
+      {
+        "key": "class_name",
+        "value": "class_name"
+      },
+      {
+        "key": "data_game_history_id",
+        "value": "data_game_history_id"
+      }
+    ],
+    "cookies": [
+      {
+        "key": "nth_os",
+        "value": "TO_os"
+      },
+      {
+        "key": "nth_sdk",
+        "value": "TO_sdk"
+      }
+    ]
+  }
+]

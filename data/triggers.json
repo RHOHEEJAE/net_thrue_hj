@@ -1,0 +1,382 @@
+[
+  {
+    "trigger_code": "CLICK_EVENT",
+    "trigger_name": "CLICK_EVENT",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": "a,button, li.f_radio.s, input.search-input__input, svg.search-header__icon-search, article.ticket_new.swiper-slide.swiper-slide-active, [data-id=main-user-summary-badge]"
+    },
+    "conditions": [
+      {
+        "variable": "is_commerce_tab",
+        "operator": "같음",
+        "value": false
+      },
+      {
+        "variable": "TO_has_search",
+        "operator": "같음",
+        "value": false
+      },
+      {
+        "variable": "TO_has_like",
+        "operator": "같음",
+        "value": false
+      }
+    ]
+  },
+  {
+    "trigger_code": "DOM_READY",
+    "trigger_name": "DOM_READY",
+    "event_type": "dom_ready",
+    "enabled": true,
+    "description": "",
+    "event_config": {},
+    "conditions": []
+  },
+  {
+    "trigger_code": "Scroll Event",
+    "trigger_name": "Scroll Event",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "custom Scroll Event",
+    "event_config": {
+      "event_name": "scroll"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "Swipe Event",
+    "trigger_name": "Swipe Event",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "custom Swipe Event",
+    "event_config": {
+      "event_name": "swipe"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "Popup Event",
+    "trigger_name": "Popup Event",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "custom popup event",
+    "event_config": {
+      "event_name": "popup"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "URL 주소 변경",
+    "trigger_name": "URL 주소 변경",
+    "event_type": "url_change",
+    "enabled": true,
+    "description": "상품 상세페이지 제외",
+    "event_config": {},
+    "conditions": []
+  },
+  {
+    "trigger_code": "Scroll Impression Event",
+    "trigger_name": "Scroll Impression Event",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "custom Scroll_Impression event",
+    "event_config": {
+      "event_name": "Scroll_Impression"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "pv_detail(Custom)",
+    "trigger_name": "pv_detail(Custom)",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "커스텀",
+    "event_config": {
+      "event_name": "pvDetail"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "pv(Custom)",
+    "trigger_name": "",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "event_name": "pv"
+    },
+    "conditions": [
+      {
+        "variable": "path",
+        "operator": "같지 않음",
+        "value": "/order/payment"
+      }
+    ]
+  },
+  {
+    "trigger_code": "Click LikeBtn Event",
+    "trigger_name": "Click LikeBtn Event",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "찜하기 버튼 클릭",
+    "event_config": {
+      "css_selector": ".btn-like, .bottm-btn-like, .ranking-goods-like, .favorite-button.btn-like,.favorite-button"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "Banner Impression Event",
+    "trigger_name": "Banner Impression Event",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "event_name": "impression"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "click_img",
+    "trigger_name": "click_img",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "상위에 <a>, <button> 태그 없는 img 항목",
+    "event_config": {
+      "css_selector": "img"
+    },
+    "conditions": [
+      {
+        "variable": "TO_has_a",
+        "operator": "같음",
+        "value": false
+      },
+      {
+        "variable": "TO_has_btn",
+        "operator": "같음",
+        "value": false
+      },
+      {
+        "variable": "TO_has_div",
+        "operator": "같음",
+        "value": false
+      }
+    ]
+  },
+  {
+    "trigger_code": "URL 주소 변경_페이설정페이지",
+    "trigger_name": "URL 주소 변경_페이설정페이지",
+    "event_type": "url_change",
+    "enabled": true,
+    "description": "페이설정페이지",
+    "event_config": {},
+    "conditions": [
+      {
+        "variable": "url",
+        "operator": "정규 표현식과 일치",
+        "value": ".*tb-rrpay.+/rround/settings.*"
+      }
+    ]
+  },
+  {
+    "trigger_code": "Click_div[role]",
+    "trigger_name": "Click_div[role]",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "div 의 role 이 link 인경우",
+    "event_config": {
+      "css_selector": "div[role=link], div[role=button], div[onclick]"
+    },
+    "conditions": [
+      {
+        "variable": "TO_has_btn",
+        "operator": "같음",
+        "value": true
+      }
+    ]
+  },
+  {
+    "trigger_code": "Click_div_whistle_wash",
+    "trigger_name": "Click_div_whistle_wash",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "휘슬 세차장 목록 선택 시",
+    "event_config": {
+      "css_selector": "div.item"
+    },
+    "conditions": [
+      {
+        "variable": "path",
+        "operator": "포함",
+        "value": "washStation"
+      }
+    ]
+  },
+  {
+    "trigger_code": "enter key press",
+    "trigger_name": "enter key press",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "event_name": "enter"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "tab-item  click",
+    "trigger_name": "tab-item  click",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": ".tab-item, .search-challenge__more-button > button, .search-feed__more-button > button"
+    },
+    "conditions": [
+      {
+        "variable": "isSearchChipBtn",
+        "operator": "같음",
+        "value": false
+      }
+    ]
+  },
+  {
+    "trigger_code": "svg Click Event",
+    "trigger_name": "svg Click Event",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": "svg.svg"
+    },
+    "conditions": [
+      {
+        "variable": "TO_has_svg",
+        "operator": "같음",
+        "value": true
+      },
+      {
+        "variable": "TO_has_like",
+        "operator": "같음",
+        "value": false
+      }
+    ]
+  },
+  {
+    "trigger_code": "Click commerce tab Event",
+    "trigger_name": "Click commerce tab Event",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": "a"
+    },
+    "conditions": [
+      {
+        "variable": "is_commerce_tab",
+        "operator": "같음",
+        "value": true
+      },
+      {
+        "variable": "is_commerce_popup",
+        "operator": "같음",
+        "value": false
+      }
+    ]
+  },
+  {
+    "trigger_code": "click touchend",
+    "trigger_name": "click touchend",
+    "event_type": "custom",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "event_name": "click_touch"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "except_search_btn",
+    "trigger_name": "except_search_btn",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "클릭 시 제외할 돋보기 버튼 - touchEnd로 대체됨\n(통합검색 페이지)",
+    "event_config": {
+      "css_selector": ".search-header__icon-search"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "main popup click",
+    "trigger_name": "main popup click",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": "a, button"
+    },
+    "conditions": [
+      {
+        "variable": "is_commerce_popup",
+        "operator": "같음",
+        "value": true
+      }
+    ]
+  },
+  {
+    "trigger_code": "filter 처리",
+    "trigger_name": "filter 처리",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": ".ranking-modal__fixed button, .sort-modal__footer > button, .quickmenu__item > a"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "Click review item",
+    "trigger_name": "",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "",
+    "event_config": {
+      "css_selector": "div.review-recomm-item"
+    },
+    "conditions": [
+      {
+        "variable": "is_review_item",
+        "operator": "같음",
+        "value": true
+      }
+    ]
+  },
+  {
+    "trigger_code": "button washBooking",
+    "trigger_name": "button washBooking",
+    "event_type": "element_click",
+    "enabled": true,
+    "description": "세차 예약 최종 예약버튼인 '동의하고 예약하기' 버튼 클릭",
+    "event_config": {
+      "css_selector": ".carwash .main .reservation.v2 .btn_area_wide.p12 .btn_default"
+    },
+    "conditions": []
+  },
+  {
+    "trigger_code": "URL 주소 변경_혜택카드상세페이지",
+    "trigger_name": "URL 주소 변경_혜택카드상세페이지",
+    "event_type": "url_change",
+    "enabled": true,
+    "description": "URL 주소 변경_혜택카드상세페이지",
+    "event_config": {},
+    "conditions": [
+      {
+        "variable": "url",
+        "operator": "포함",
+        "value": "rround/mass/detail"
+      }
+    ]
+  }
+]

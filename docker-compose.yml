@@ -1,0 +1,159 @@
+# net_thrue_01 + PostgreSQL + Kafka 단일 Compose
+# 사용: docker compose up -d
+# API: http://localhost:8000, Kafka UI(선택): http://localhost:18080
+# 기동 시 DB 테이블 자동 생성 + 초기 관리자 계정 생성 (ID: admin, PW: admin)
+# (version 은 Compose V2에서 무시되므로 제거)
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: local-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      TZ: Asia/Seoul
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d testdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-init:
+    image: postgres:15
+    container_name: net-thrue-db-init
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: testuser
+      PGDATABASE: testdb
+      PGPASSWORD: testpass
+    volumes:
+      - .:/app
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until pg_isready -h postgres -U testuser -d testdb; do sleep 2; done
+        psql -h postgres -U testuser -d testdb -f /app/create_user_table.sql
+        psql -h postgres -U testuser -d testdb -f /app/db/add_user_roles_and_approval.sql
+        psql -h postgres -U testuser -d testdb -f /app/db/create_analytics_tables.sql
+        psql -h postgres -U testuser -d testdb -f /app/db/init_admin.sql
+        echo "[db-init] Done. Tables created. admin / admin account ready."
+
+  zookeeper:
+    image: zookeeper:3.7.1
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      TZ: Asia/Seoul
+    volumes:
+      - zookeeper_data:/data
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.2.3
+    container_name: kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      TZ: Asia/Seoul
+    ports:
+      - "9092:9092"
+
+  # --- 앱 서비스 (동일 이미지, 다른 명령) ---
+  app-api:
+    build: .
+    container_name: net-thrue-api
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: test
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  app-consumer:
+    build: .
+    container_name: net-thrue-consumer
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      kafka:
+        condition: service_started
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: test
+    command: ["python", "-m", "kafka_client.consumer"]
+
+  app-funnel-agg:
+    build: .
+    container_name: net-thrue-funnel-agg
+    restart: unless-stopped
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    command:
+      - sh
+      - -c
+      - "while true; do python run_funnel_agg.py $$(date +%Y-%m-%d); sleep 60; done"
+
+  # 선택: Kafka UI (토픽/메시지 확인용)
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    ports:
+      - "18080:8080"
+
+volumes:
+  postgres_data:
+  zookeeper_data:

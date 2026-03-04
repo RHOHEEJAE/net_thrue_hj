@@ -1,0 +1,64 @@
+[
+  {
+    "group_id": "vg_1771829358246",
+    "name": "기본 파라미터",
+    "description": "",
+    "items": [
+      {
+        "key": "nth_channel",
+        "value": "channel"
+      },
+      {
+        "key": "nth_menuId",
+        "value": "page_id"
+      },
+      {
+        "key": "nth_evType",
+        "value": "act_type"
+      }
+    ]
+  },
+  {
+    "group_id": "vg_1771829511618",
+    "name": "mypage",
+    "description": "",
+    "items": [
+      {
+        "key": "reviewer_name",
+        "value": "reviewer_name"
+      },
+      {
+        "key": "rrpay_point",
+        "value": "rrpay_point"
+      },
+      {
+        "key": "coupon_cnt",
+        "value": "coupon_cnt"
+      },
+      {
+        "key": "prd_review_cnt",
+        "value": "prd_review_cnt"
+      },
+      {
+        "key": "balso_order_cnt",
+        "value": "balso_order_cnt"
+      },
+      {
+        "key": "cancel_exchange_return_cnt",
+        "value": "cancel_exchange_return_cnt"
+      },
+      {
+        "key": "restock_alert_cnt",
+        "value": "restock_alert_cnt"
+      },
+      {
+        "key": "like_prd_cnt",
+        "value": "like_prd_cnt"
+      },
+      {
+        "key": "like_store_cnt",
+        "value": "like_store_cnt"
+      }
+    ]
+  }
+]

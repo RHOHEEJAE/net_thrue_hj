@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Env / secrets
+.env
+.env.local
+*.local
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (로컬 마운트 데이터)
+# postgres_data 등은 docker-compose에서 named volume 사용 시 호스트에 안 생김
+
+# 선택: 배포된 설정·버전은 포함할지 제외할지 결정
+# 포함하면 클론 후 바로 SDK가 설정을 읽을 수 있음
+# settings/versions/
+# settings/latest.json
+
+# 데이터 파일이 크거나 민감하면 제외 (필요 시 주석 해제)
+# data/*.json

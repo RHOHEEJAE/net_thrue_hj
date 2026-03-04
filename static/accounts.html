@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>계정 관리 - 관리자 전용</title>
+  <style>
+    :root { --bg: #0f172a; --card: #111827; --border: #1f2937; --text: #e5e7eb; --muted: #9ca3af; --accent: #3b82f6; --success: #22c55e; --danger: #ef4444; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    header {
+      position: sticky; top: 0; z-index: 10; background: #020617; border-bottom: 1px solid var(--border);
+      padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;
+    }
+    header h1 { margin: 0; font-size: 18px; }
+    .btn-nav {
+      display: inline-flex; align-items: center; padding: 8px 16px; margin-right: 8px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #fff; text-decoration: none;
+      font-size: 14px; font-weight: 600; border-radius: 8px; box-shadow: 0 2px 8px rgba(59,130,246,0.4);
+    }
+    .btn-nav:hover { opacity: 0.95; }
+    main { max-width: 1000px; margin: 0 auto; padding: 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 12px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .badge-pending { background: #f59e0b33; color: #f59e0b; }
+    .badge-approved { background: #22c55e33; color: #22c55e; }
+    .badge-admin { background: #3b82f633; color: #60a5fa; }
+    .badge-user { background: #6b728033; color: var(--muted); }
+    select { background: #020617; border: 1px solid var(--border); color: var(--text); padding: 6px 8px; border-radius: 4px; margin-right: 8px; }
+    button { background: var(--accent); border: none; color: white; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .empty { color: var(--muted); padding: 24px; text-align: center; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>👥 계정 관리</h1>
+  <div>
+    <a href="/static/admin.html" class="btn-nav">← 컨테이너 관리</a>
+    <a href="/static/dashboard.html" class="btn-nav">📊 행동 분석 대시보드</a>
+    <button type="button" onclick="logout()" style="background:#334155;margin-left:8px;">로그아웃</button>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <p style="color:var(--muted);margin:0 0 12px 0;">가입 신청 후 관리자가 권한(관리자/사용자)을 지정하고 승인해야 해당 계정으로 로그인할 수 있습니다.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>아이디</th>
+          <th>가입일</th>
+          <th>권한</th>
+          <th>상태</th>
+          <th>승인일</th>
+          <th>승인자</th>
+          <th>동작</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <p id="emptyMsg" class="empty" style="display:none;">계정이 없습니다.</p>
+  </div>
+</main>
+<script>
+async function checkAuth() {
+  const res = await fetch("/api/check-auth", { credentials: "include" });
+  const d = await res.json();
+  if (!d.authenticated) { window.location.href = "/"; return false; }
+  if (d.role !== "admin") { window.location.href = "/static/dashboard.html"; return false; }
+  return true;
+}
+
+async function loadAccounts() {
+  if (!await checkAuth()) return;
+  try {
+    const res = await fetch("/api/admin/accounts", { credentials: "include" });
+    if (res.status === 403) { window.location.href = "/static/dashboard.html"; return; }
+    if (res.status === 401) { window.location.href = "/"; return; }
+    const data = await res.json();
+    const list = data.data || [];
+    const tbody = document.getElementById("tbody");
+    const emptyMsg = document.getElementById("emptyMsg");
+    if (list.length === 0) {
+      tbody.innerHTML = "";
+      emptyMsg.style.display = "block";
+      return;
+    }
+    emptyMsg.style.display = "none";
+    tbody.innerHTML = list.map(function(u) {
+      var un = (u.username || "").replace(/"/g, "&quot;");
+      const statusClass = u.status === "approved" ? "badge-approved" : "badge-pending";
+      const roleClass = u.role === "admin" ? "badge-admin" : "badge-user";
+      const statusText = u.status === "approved" ? "승인됨" : "승인대기";
+      let action = "";
+      if (u.status === "pending") {
+        action = '<select class="roleSelect"><option value="user">사용자</option><option value="admin">관리자</option></select>' +
+          '<button type="button" class="btn-approve" data-username="' + un + '">승인</button>';
+      } else {
+        action = '<span class="muted">-</span>';
+      }
+      return '<tr><td>' + escapeHtml(u.username) + '</td><td>' + (u.created_at || '-') + '</td><td><span class="badge ' + roleClass + '">' + (u.role === "admin" ? "관리자" : "사용자") + '</span></td><td><span class="badge ' + statusClass + '">' + statusText + '</span></td><td>' + (u.approved_at || '-') + '</td><td>' + escapeHtml(u.approved_by || '-') + '</td><td>' + action + '</td></tr>';
+    }).join("");
+  } catch (e) {
+    console.error(e);
+    window.location.href = "/";
+  }
+}
+
+function escapeHtml(s) {
+  if (s == null) return "";
+  var div = document.createElement("div");
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+async function approve(btn) {
+  var username = (btn.dataset.username || "").replace(/&quot;/g, '"');
+  var row = btn.closest("tr");
+  var sel = row ? row.querySelector(".roleSelect") : null;
+  var role = sel ? sel.value : "user";
+  btn.disabled = true;
+  try {
+    const res = await fetch("/api/admin/accounts/approve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ username: username, role: role })
+    });
+    var data = await res.json();
+    if (res.ok && data.ok) {
+      loadAccounts();
+    } else {
+      alert(data.detail || "승인 처리에 실패했습니다.");
+      btn.disabled = false;
+    }
+  } catch (e) {
+    alert("오류: " + (e.message || e));
+    btn.disabled = false;
+  }
+}
+
+function logout() {
+  fetch("/api/logout", { method: "POST", credentials: "include" }).then(function() {
+    window.location.href = "/";
+  });
+}
+
+document.getElementById("tbody").addEventListener("click", function(e) {
+  var btn = e.target.closest(".btn-approve");
+  if (btn) approve(btn);
+});
+
+loadAccounts();
+</script>
+</body>
+</html>

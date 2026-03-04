@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>Tracker Admin</title>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #3b82f6;
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #020617;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    header .actions button {
+      margin-left: 8px;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1400px;
+      margin: auto;
+    }
+
+    section {
+      margin-bottom: 32px;
+    }
+
+    section h2 {
+      margin-bottom: 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 80px 80px 56px;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .row.tags-row {
+      grid-template-columns: 1fr 1fr 1fr 1fr 100px 80px 80px 56px;
+    }
+
+    .row .detail-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .row .item-delete-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+      background: var(--danger);
+    }
+
+    input, textarea {
+      width: 100%;
+      background: #020617;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+
+    textarea {
+      font-family: monospace;
+      height: 120px;
+    }
+
+    button {
+      background: var(--accent);
+      border: none;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    button.secondary {
+      background: #334155;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    .toggle {
+      appearance: none;
+      width: 40px;
+      height: 20px;
+      background: #374151;
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .toggle:checked {
+      background: var(--success);
+    }
+
+    .toggle::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: white;
+      border-radius: 50%;
+      transition: .2s;
+    }
+
+    .toggle:checked::after {
+      transform: translateX(20px);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      min-width: 400px;
+      max-width: 90vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal-content.wide { min-width: 640px; }
+    .modal-content h3 { margin: 0 0 16px 0; font-size: 18px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; margin-bottom: 4px; font-size: 13px; }
+    .form-group label .hint { font-weight: normal; color: var(--muted); font-size: 12px; }
+    .modal-actions { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; }
+    .version-row {
+      display: grid;
+      grid-template-columns: 130px 100px 100px 1fr 160px 110px 70px;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .version-row.header { font-weight: 600; color: var(--muted); font-size: 12px; }
+    .version-row:last-child { border-bottom: none; }
+    .version-row .rollback-btn, .version-row .delete-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+    .version-row .delete-btn { background: var(--danger); }
+
+    /* GTM 스타일 레이아웃 */
+    .gtm-layout { display: flex; min-height: calc(100vh - 52px); }
+    .gtm-sidebar {
+      width: 220px;
+      background: #020617;
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      flex-shrink: 0;
+    }
+    .gtm-sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      border-left: 3px solid transparent;
+    }
+    .gtm-sidebar-item:hover { background: rgba(255,255,255,0.05); }
+    .gtm-sidebar-item.active { background: rgba(59,130,246,0.15); border-left-color: var(--accent); font-weight: 500; }
+    .gtm-main { flex: 1; padding: 24px; overflow-y: auto; }
+    .gtm-panel { display: none; }
+    .gtm-panel.active { display: block; }
+    .gtm-panel h2 { margin: 0 0 16px 0; font-size: 18px; display: flex; align-items: center; justify-content: space-between; }
+    .gtm-panel h2 .count { font-weight: normal; color: var(--muted); font-size: 14px; }
+    .var-subnav { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+    .var-subnav-item { padding: 10px 16px; cursor: pointer; color: var(--muted); font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .var-subnav-item:hover { color: var(--text); }
+    .var-subnav-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .var-subpage { display: none; }
+    .var-subpage.active { display: block; }
+    .table-basic { width: 100%; border-collapse: collapse; }
+    .table-basic th, .table-basic td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    .table-basic th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    .kv-row { display: grid; grid-template-columns: 1fr 1fr 40px; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+    /* 검색 가능 드롭다운 */
+    .searchable-select-wrap { position: relative; width: 100%; }
+    .searchable-select-wrap .searchable-display {
+      width: 100%;
+      background: #020617;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 28px 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+    }
+    .searchable-select-wrap .searchable-display::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--muted);
+    }
+    .searchable-select-wrap.open .searchable-display::after { transform: translateY(-50%) rotate(180deg); }
+    .searchable-select-wrap .searchable-panel {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 100%;
+      margin-top: 2px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      z-index: 200;
+      max-height: 220px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .searchable-select-wrap.open .searchable-panel { display: block; }
+    .searchable-select-wrap .searchable-search {
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+      background: #020617;
+      color: var(--text);
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 0;
+    }
+    .searchable-select-wrap .searchable-search::placeholder { color: var(--muted); }
+    .searchable-select-wrap .searchable-list {
+      max-height: 180px;
+      overflow-y: auto;
+      margin: 0;
+      padding: 4px 0;
+      list-style: none;
+    }
+    .searchable-select-wrap .searchable-list li {
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .searchable-select-wrap .searchable-list li:hover,
+    .searchable-select-wrap .searchable-list li.highlight { background: rgba(59,130,246,0.2); }
+    .searchable-select-wrap .searchable-list li.hidden { display: none; }
+    .searchable-select-wrap .searchable-list li.empty-msg { color: var(--muted); cursor: default; }
+    .searchable-select-wrap .searchable-list li.empty-msg:hover { background: transparent; }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>헥토 행동 데이터 관리 페이지</h1>
+  <div class="actions">
+    <a href="/static/dashboard.html" class="btn-nav" style="display:inline-flex;align-items:center;padding:8px 16px;margin-right:12px;background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(59,130,246,0.4);transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(59,130,246,0.5)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(59,130,246,0.4)';" title="기간·필터로 이벤트·퍼널·히트맵 조회">📊 행동 분석 대시보드</a>
+    <a href="/static/accounts.html" class="btn-nav" style="display:inline-flex;align-items:center;padding:8px 16px;margin-right:12px;background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(59,130,246,0.4);" title="계정 목록·가입 승인">👥 계정 관리</a>
+    <a href="#" id="btnKafkaUi" class="btn-nav" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;padding:8px 16px;margin-right:12px;background:linear-gradient(135deg, #0d9488 0%, #0f766e 100%);color:#fff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;box-shadow:0 2px 8px rgba(13,148,136,0.4);transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(13,148,136,0.5)';" onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(13,148,136,0.4)';" title="Kafka UI에서 test 토픽 메시지 보기">📋 Kafka UI (test 토픽)</a>
+    <button class="secondary" onclick="save()">저장</button>
+    <button class="danger" onclick="openDeployModal()">게시</button>
+    <button class="secondary" onclick="logout()">로그아웃</button>
+  </div>
+</header>
+
+<!-- 게시 모달: 이름, 소속, 코멘트 입력 -->
+<div id="deployModal" class="modal">
+  <div class="modal-content">
+    <h3>게시</h3>
+    <div class="form-group">
+      <label for="deployName">이름</label>
+      <input type="text" id="deployName" placeholder="예: 홍길동" maxlength="50">
+    </div>
+    <div class="form-group">
+      <label for="deployAffiliation">소속</label>
+      <input type="text" id="deployAffiliation" placeholder="예: 데이터엔지니어링팀" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label for="deployComment">게시 코멘트 (선택)</label>
+      <input type="text" id="deployComment" placeholder="예: PV_DETAIL 로직 수정" maxlength="200">
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeDeployModal()">취소</button>
+      <button class="danger" onclick="confirmDeploy()">게시하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 변수 상세 모달 -->
+<div id="variableDetailModal" class="modal">
+  <div class="modal-content wide">
+    <h3>변수 상세 수정</h3>
+    <div class="form-group">
+      <label>변수명 (코드)</label>
+      <input type="text" id="varDetail_code" placeholder="예: my_var">
+    </div>
+    <div class="form-group">
+      <label>이름</label>
+      <input type="text" id="varDetail_name" placeholder="표시 이름">
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <textarea id="varDetail_description" rows="2" placeholder="변수 설명"></textarea>
+    </div>
+    <div class="form-group">
+      <label>유형</label>
+      <select id="varDetail_type" onchange="onVariableTypeChange()">
+        <option value="string">문자열</option>
+        <option value="number">숫자</option>
+        <option value="cookie">쿠키</option>
+        <option value="dom">DOM요소</option>
+        <option value="url">URL(표준)</option>
+        <option value="element">요소(표준)</option>
+        <option value="script">스크립트</option>
+        <option value="script_global">스크립트 전역 변수</option>
+      </select>
+    </div>
+    <div id="varDetail_typeFields"></div>
+    <div class="form-group">
+      <label><input type="checkbox" id="varDetail_enabled" checked> 사용</label>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeVariableDetail()">취소</button>
+      <button class="danger" onclick="saveVariableDetail()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 트리거 상세 모달 -->
+<div id="triggerDetailModal" class="modal">
+  <div class="modal-content wide">
+    <h3>트리거 상세 수정</h3>
+    <div class="form-group">
+      <label>트리거 코드</label>
+      <input type="text" id="trigDetail_code" placeholder="예: CLICK_EVENT">
+    </div>
+    <div class="form-group">
+      <label>트리거 이름</label>
+      <input type="text" id="trigDetail_name" placeholder="표시 이름">
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <textarea id="trigDetail_description" rows="2" placeholder="트리거 설명"></textarea>
+    </div>
+    <div class="form-group">
+      <label>이벤트 유형</label>
+      <select id="trigDetail_eventType" onchange="onTriggerEventTypeChange()">
+        <option value="page_load" title="페이지가 변경되자마자 발생하는 이벤트입니다.">페이지 로드</option>
+        <option value="dom_ready" title="DOM이 상호작용할 준비가 완료되면 발생하는 이벤트입니다.">DOM 준비완료</option>
+        <option value="window_load" title="이미지 등의 페이지 구성요소가 모두 로드되면 발생하는 이벤트입니다.">윈도우 로드</option>
+        <option value="page_show" title="웹브라우저 네비게이션, 새로고침 등 페이지가 화면에 다시 표시될때마다 발생하는 이벤트입니다.">페이지 표시</option>
+        <option value="visibility_change" title="웹 페이지의 화면 표시 여부가 바뀔 때마다 발생하는 이벤트입니다.">화면 노출 변화</option>
+        <option value="url_change" title="SPA에서 URL 주소가 변경되면 발생하는 이벤트입니다.">URL 주소 변경</option>
+        <option value="hash_change" title="URL 주소의 해시값이 변경되면 발생하는 이벤트입니다.">URL 해시 변경</option>
+        <option value="element_click" title="특정한 DOM 요소가 클릭되면 발생하는 이벤트입니다.">특정 요소 클릭</option>
+        <option value="click" title="페이지 임의의 지점이 클릭되면 발생하는 이벤트입니다.">클릭</option>
+        <option value="custom" title="맞춤형 이벤트로 발생 시점을 호스트에서 결정하는 이벤트입니다.">커스텀</option>
+      </select>
+    </div>
+    <div id="trigDetail_eventFields"></div>
+    <div class="form-group">
+      <label>조건 <span class="hint">(트리거가 실행될 조건을 설정합니다.)</span></label>
+      <div id="trigDetail_conditions"></div>
+      <button type="button" class="secondary" style="margin-top:8px" onclick="addTriggerCondition()">+ 추가</button>
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" id="trigDetail_enabled" checked> 사용</label>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeTriggerDetail()">취소</button>
+      <button class="danger" onclick="saveTriggerDetail()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 태그 상세 모달 -->
+<div id="tagDetailModal" class="modal">
+  <div class="modal-content wide" style="max-width:720px">
+    <h3>태그 상세 수정</h3>
+    <div class="form-group">
+      <label>태그 코드</label>
+      <input type="text" id="tagDetail_code" placeholder="예: PV_DETAIL">
+    </div>
+    <div class="form-group">
+      <label>태그명</label>
+      <input type="text" id="tagDetail_name" placeholder="표시 이름">
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <textarea id="tagDetail_description" rows="2" placeholder="태그 설명"></textarea>
+    </div>
+    <div class="form-group">
+      <label>트리거</label>
+      <div class="form-group" style="margin-bottom:8px">
+        <span class="muted" style="font-size:12px">실행조건</span>
+        <div id="tagDetail_runConditions" style="margin-top:4px"></div>
+        <label style="margin-top:6px;display:flex;align-items:center;gap:8px"><input type="checkbox" id="tagDetail_runAny"> 하나 이상 만족 시 실행</label>
+        <button type="button" class="secondary" style="margin-top:6px" onclick="addTagRunCondition()">+ 추가</button>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <span class="muted" style="font-size:12px">예외 조건</span>
+        <div id="tagDetail_exceptConditions" style="margin-top:4px"></div>
+        <button type="button" class="secondary" style="margin-top:6px" onclick="addTagExceptCondition()">+ 추가</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>유형</label>
+      <select id="tagDetail_type" onchange="onTagTypeChange()">
+        <option value="script">스크립트</option>
+        <option value="nlogger">헥토 로깅 모듈</option>
+      </select>
+    </div>
+    <div id="tagDetail_scriptBlock" class="form-group">
+      <label>함수 코드 (수집·로그 로직)</label>
+      <textarea id="tagDetail_funcJs" rows="10" placeholder="function trackerFunc(send) { return function(e) { ... send({ ... }); }; }" style="font-family:monospace"></textarea>
+      <span class="muted" style="font-size:12px">트리거 시 실행되며, send()로 전송한 payload가 로그로 수집됩니다.</span>
+    </div>
+    <div id="tagDetail_nloggerBlock" style="display:none">
+      <div class="form-group">
+        <label>전송방식</label>
+        <select id="tagDetail_sendMethod">
+          <option value="default">기본 - 로그를 즉시 전송합니다.</option>
+          <option value="defer">지연 - 페이지 이동 후 로그를 전송하여 수집 누락을 방지합니다.</option>
+          <option value="beacon">비콘API - 페이지 이동 중에도 전송 요청이 취소되지 않음은 보장되나, 실패 시 해당 로그는 누락 처리됩니다.</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>로그 유형</label>
+        <select id="tagDetail_logType" onchange="onTagLogTypeChange()">
+          <option value="default">기본</option>
+          <option value="custom">사용자 정의</option>
+        </select>
+      </div>
+      <div class="form-group" id="tagDetail_logTypePathWrap" style="display:none">
+        <label>경로</label>
+        <input type="text" id="tagDetail_logTypePath" placeholder="사용자 정의 로그 경로">
+      </div>
+      <div class="form-group">
+        <label>파라미터</label>
+        <div id="tagDetail_params"></div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <button type="button" class="secondary" onclick="addTagParamRow()">+ 추가</button>
+          <select id="tagDetail_paramGroupSelect" style="width:200px"><option value="">변수 그룹 선택</option></select>
+          <button type="button" class="secondary" onclick="addTagParamGroup()">+ 그룹추가</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>쿠키</label>
+        <div id="tagDetail_cookies"></div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+          <button type="button" class="secondary" onclick="addTagCookieRow()">+ 추가</button>
+          <select id="tagDetail_cookieGroupSelect" style="width:200px"><option value="">변수 그룹 선택</option></select>
+          <button type="button" class="secondary" onclick="addTagCookieGroup()">+ 그룹추가</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label><input type="checkbox" id="tagDetail_enabled" checked> 사용</label>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeTagDetail()">취소</button>
+      <button class="danger" onclick="saveTagDetail()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 변수 그룹 추가/수정 모달 -->
+<div id="variableGroupModal" class="modal">
+  <div class="modal-content wide">
+    <h3 id="variableGroupModalTitle">새 변수 그룹 추가</h3>
+    <div class="form-group">
+      <label>변수 그룹명</label>
+      <input type="text" id="vg_name" placeholder="예: 공통 파라미터">
+    </div>
+    <div class="form-group">
+      <label>설명</label>
+      <textarea id="vg_description" rows="2" placeholder="변수 그룹 설명"></textarea>
+    </div>
+    <div class="form-group">
+      <label>구성</label>
+      <span class="muted" style="font-size:12px">키와 값(기본 변수 또는 변수)을 추가하세요.</span>
+      <div id="vg_items" style="margin-top:8px"></div>
+      <button type="button" class="secondary" style="margin-top:8px" onclick="addVariableGroupItem()">+ 추가</button>
+    </div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="closeVariableGroupModal()">취소</button>
+      <button class="danger" onclick="saveVariableGroup()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="gtm-layout">
+  <nav class="gtm-sidebar">
+    <div class="gtm-sidebar-item active" data-panel="variables" onclick="switchPanel('variables')">변수</div>
+    <div class="gtm-sidebar-item" data-panel="triggers" onclick="switchPanel('triggers')">트리거</div>
+    <div class="gtm-sidebar-item" data-panel="tags" onclick="switchPanel('tags')">태그</div>
+    <div class="gtm-sidebar-item" data-panel="versions" onclick="switchPanel('versions')">버전</div>
+  </nav>
+  <main class="gtm-main">
+    <div id="panel-variables" class="gtm-panel active">
+      <h2>변수 <span class="count" id="varCount">0개</span></h2>
+      <p class="muted" style="margin-bottom:12px">태그와 트리거에서 참조할 수 있는 값을 정의합니다.</p>
+      <div class="var-subnav">
+        <div class="var-subnav-item active" data-sub="builtin" onclick="switchVarSubpage('builtin')">기본 변수</div>
+        <div class="var-subnav-item" data-sub="variables" onclick="switchVarSubpage('variables')">변수</div>
+        <div class="var-subnav-item" data-sub="groups" onclick="switchVarSubpage('groups')">변수 그룹</div>
+      </div>
+      <div id="var-subpage-builtin" class="var-subpage active">
+        <table class="table-basic card" style="padding:0">
+          <thead><tr><th>이름</th><th>설명</th></tr></thead>
+          <tbody id="builtinVariablesTable"></tbody>
+        </table>
+      </div>
+      <div id="var-subpage-variables" class="var-subpage">
+        <div id="variables"></div>
+        <button onclick="addVariable()">+ 변수 추가</button>
+      </div>
+      <div id="var-subpage-groups" class="var-subpage">
+        <button onclick="openVariableGroupModal()" style="margin-bottom:12px">+ 새 변수 그룹 추가</button>
+        <div id="variableGroupsList"></div>
+      </div>
+    </div>
+    <div id="panel-triggers" class="gtm-panel">
+      <h2>트리거 <span class="count" id="trigCount">0개</span></h2>
+      <p class="muted" style="margin-bottom:12px">태그가 실행되는 시점(이벤트)을 정의합니다.</p>
+      <div id="triggers"></div>
+      <button onclick="addTrigger()">+ 트리거 추가</button>
+    </div>
+    <div id="panel-tags" class="gtm-panel">
+      <h2>태그 <span class="count" id="tagCount">0개</span></h2>
+      <p class="muted" style="margin-bottom:12px">트리거 발생 시 실행할 수집·전송 로직을 정의합니다.</p>
+      <div id="tags"></div>
+      <button onclick="addTag()">+ 태그 추가</button>
+    </div>
+    <div id="panel-versions" class="gtm-panel">
+      <h2>버전</h2>
+      <p class="muted" id="currentVersionText">현재 게시된 버전: -</p>
+      <div class="card">
+        <div id="deployHistoryList">로딩 중...</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let config = { variables: [], variable_groups: [], triggers: [], tags: [] };
+
+// 기본 변수 (SDK에서 제공하는 읽기 전용 변수)
+var BUILTIN_VARIABLES = [
+  { name: 'activeTag', desc: '활성화된 태그(객체)' },
+  { name: 'activeTriggers', desc: '활성화된 트리거들 (배열)' },
+  { name: 'clickClass', desc: '클릭 항목 클래스명' },
+  { name: 'clickElement', desc: '클릭 항목 DOM 요소' },
+  { name: 'clickId', desc: '클릭 항목 ID' },
+  { name: 'clickTag', desc: '클릭 항목 태그명' },
+  { name: 'clickText', desc: '클릭 항목 텍스트' },
+  { name: 'customData', desc: '커스텀 이벤트 변수' },
+  { name: 'hash', desc: '페이지 URL 해시' },
+  { name: 'host', desc: '페이지 URL 호스트' },
+  { name: 'nlogger', desc: '넷스루 로깅 모듈' },
+  { name: 'paramDict', desc: '페이지 URL 파라미터 (객체)' },
+  { name: 'params', desc: '페이지 URL 파라미터' },
+  { name: 'path', desc: '페이지 URL 경로' },
+  { name: 'referrer', desc: '이전 방문 페이지 주소' },
+  { name: 'title', desc: '페이지 제목' },
+  { name: 'url', desc: '페이지 전체 URL' }
+];
+
+function getAllVariableOptions() {
+  var opts = [];
+  BUILTIN_VARIABLES.forEach(function(b){ opts.push({ value: b.name, label: b.name }); });
+  (config.variables || []).forEach(function(v){
+    var code = v.variable_code || '';
+    if (code) opts.push({ value: code, label: v.variable_name ? (v.variable_name + ' (' + code + ')') : code });
+  });
+  return opts;
+}
+
+// 로그인 체크
+async function checkAuth() {
+  try {
+    const res = await fetch("/api/check-auth", { credentials: "include" });
+    const data = await res.json();
+    if (!data.authenticated) {
+      window.location.href = "/static/login.html";
+      return false;
+    }
+    if (data.role !== "admin") {
+      window.location.href = "/static/dashboard.html";
+      return false;
+    }
+    return true;
+  } catch (error) {
+    window.location.href = "/static/login.html";
+    return false;
+  }
+}
+
+async function load() {
+  // 인증 확인
+  const authenticated = await checkAuth();
+  if (!authenticated) return;
+
+  try {
+    const res = await fetch("/admin/config", { credentials: "include" });
+    if (res.status === 401) {
+      window.location.href = "/static/login.html";
+      return;
+    }
+    if (res.status === 403) {
+      window.location.href = "/static/dashboard.html";
+      return;
+    }
+    config = await res.json();
+    if (!config.variable_groups) config.variable_groups = [];
+    render();
+    loadDeployVersions();
+  } catch (error) {
+    console.error("설정 로드 실패:", error);
+    alert("설정을 불러오는데 실패했습니다.");
+  }
+}
+
+async function logout() {
+  try {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.href = "/static/login.html";
+  } catch (error) {
+    console.error("로그아웃 실패:", error);
+    window.location.href = "/static/login.html";
+  }
+}
+
+function switchPanel(panelId) {
+  document.querySelectorAll('.gtm-sidebar-item').forEach(function(el) {
+    el.classList.toggle('active', el.dataset.panel === panelId);
+  });
+  document.querySelectorAll('.gtm-panel').forEach(function(el) {
+    el.classList.toggle('active', el.id === 'panel-' + panelId);
+  });
+}
+
+function switchVarSubpage(subId) {
+  document.querySelectorAll('.var-subnav-item').forEach(function(el){ el.classList.toggle('active', el.dataset.sub === subId); });
+  document.querySelectorAll('.var-subpage').forEach(function(el){ el.classList.toggle('active', el.id === 'var-subpage-' + subId); });
+}
+
+function render() {
+  var v = config.variables || [];
+  document.getElementById('varCount').textContent = v.length + '개';
+  document.getElementById('builtinVariablesTable').innerHTML = BUILTIN_VARIABLES.map(function(b){
+    return '<tr><td>'+escHtml(b.name)+'</td><td class="muted">'+escHtml(b.desc)+'</td></tr>';
+  }).join('');
+  renderVariables();
+  renderVariableGroups();
+  renderTriggers();
+  renderTags();
+  document.getElementById('trigCount').textContent = (config.triggers || []).length + '개';
+  document.getElementById('tagCount').textContent = (config.tags || []).length + '개';
+  setTimeout(function(){ makeSearchableSelects(document.body); }, 0);
+}
+
+function escHtml(s) {
+  if (s == null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function makeSearchableSelect(selectEl) {
+  if (!selectEl || selectEl.tagName !== 'SELECT' || selectEl.dataset.searchable === '1') return;
+  selectEl.dataset.searchable = '1';
+  var wrap = document.createElement('div');
+  wrap.className = 'searchable-select-wrap';
+  var display = document.createElement('div');
+  display.className = 'searchable-display';
+  display.setAttribute('tabindex', '0');
+  var panel = document.createElement('div');
+  panel.className = 'searchable-panel';
+  var searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.className = 'searchable-search';
+  searchInput.placeholder = '검색 또는 붙여넣기...';
+  var list = document.createElement('ul');
+  list.className = 'searchable-list';
+  function updateDisplay() {
+    var opt = selectEl.options[selectEl.selectedIndex];
+    display.textContent = opt ? opt.textContent : '';
+  }
+  function buildList() {
+    list.innerHTML = '';
+    for (var i = 0; i < selectEl.options.length; i++) {
+      var o = selectEl.options[i];
+      var li = document.createElement('li');
+      li.textContent = o.textContent;
+      li.dataset.value = o.value;
+      li.dataset.text = o.textContent;
+      if (o.value === selectEl.value) li.classList.add('highlight');
+      li.addEventListener('click', function(ev){
+        var v = ev.currentTarget.dataset.value;
+        var t = ev.currentTarget.dataset.text || '';
+        selectEl.value = v;
+        updateDisplay();
+        wrap.classList.remove('open');
+        searchInput.value = '';
+        filterList('');
+        selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      list.appendChild(li);
+    }
+  }
+  function filterList(q) {
+    q = (q || '').toLowerCase().trim();
+    var items = list.querySelectorAll('li:not(.empty-msg)');
+    var visible = 0;
+    items.forEach(function(li){
+      var text = (li.dataset.text || '').toLowerCase();
+      var show = !q || text.indexOf(q) !== -1;
+      li.classList.toggle('hidden', !show);
+      if (show) visible++;
+    });
+    var emptyMsg = list.querySelector('li.empty-msg');
+    if (emptyMsg) emptyMsg.remove();
+    if (visible === 0 && q) {
+      var empty = document.createElement('li');
+      empty.className = 'empty-msg';
+      empty.textContent = '일치하는 항목 없음';
+      list.appendChild(empty);
+    }
+  }
+  function openPanel() {
+    wrap.classList.add('open');
+    buildList();
+    filterList(searchInput.value);
+    setTimeout(function(){ searchInput.focus(); }, 50);
+  }
+  function closePanel() {
+    wrap.classList.remove('open');
+    searchInput.value = '';
+  }
+  display.addEventListener('click', function(){ openPanel(); });
+  display.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPanel(); } });
+  searchInput.addEventListener('input', function(){ filterList(this.value); });
+  searchInput.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') { closePanel(); display.focus(); }
+  });
+  searchInput.addEventListener('paste', function(){ setTimeout(function(){ filterList(searchInput.value); }, 10); });
+  panel.addEventListener('click', function(e){ e.stopPropagation(); });
+  wrap.appendChild(display);
+  panel.appendChild(searchInput);
+  panel.appendChild(list);
+  wrap.appendChild(panel);
+  selectEl.parentNode.insertBefore(wrap, selectEl);
+  wrap.appendChild(selectEl);
+  selectEl.style.position = 'absolute';
+  selectEl.style.left = '-9999px';
+  selectEl.style.width = '0';
+  selectEl.style.height = '0';
+  selectEl.style.opacity = '0';
+  selectEl.style.pointerEvents = 'none';
+  updateDisplay();
+  document.addEventListener('click', function closeOnClick(e){
+    if (!wrap.contains(e.target)) closePanel();
+  });
+}
+
+function refreshSearchableSelectDisplay(selectEl) {
+  if (!selectEl || selectEl.tagName !== 'SELECT') return;
+  var wrap = selectEl.closest && selectEl.closest('.searchable-select-wrap');
+  if (!wrap) return;
+  var display = wrap.querySelector('.searchable-display');
+  if (display) {
+    var opt = selectEl.options[selectEl.selectedIndex];
+    display.textContent = opt ? opt.textContent : '';
+  }
+}
+
+function makeSearchableSelects(container) {
+  container = container || document;
+  var root = container.nodeType === 1 ? container : document.body;
+  var selects = root.querySelectorAll ? root.querySelectorAll('select:not([data-searchable="1"])') : [];
+  selects.forEach(function(sel){ makeSearchableSelect(sel); });
+}
+function escTextarea(s) {
+  if (s == null || s === undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderVariableGroups() {
+  var list = document.getElementById('variableGroupsList');
+  if (!list) return;
+  var groups = config.variable_groups || [];
+  list.innerHTML = groups.length === 0
+    ? '<p class="muted">등록된 변수 그룹이 없습니다. 새 변수 그룹 추가 버튼으로 추가하세요.</p>'
+    : groups.map(function(g, i){
+        var items = (g.items || []).map(function(it){ return escHtml(it.key) + ' → ' + escHtml(it.value); }).join(', ');
+        return '<div class="card" style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div><strong>'+escHtml(g.name || g.group_id)+'</strong><span class="muted" style="margin-left:8px">'+escHtml(g.description || '')+'</span><div class="muted" style="font-size:12px;margin-top:4px">'+escHtml(items || '-')+'</div></div>'+
+          '<div><button type="button" class="secondary" onclick="openVariableGroupModal('+i+')">수정</button> <button type="button" class="item-delete-btn" onclick="deleteVariableGroup('+i+')">삭제</button></div></div>';
+      }).join('');
+}
+
+var currentVariableGroupIndex = -1;
+function openVariableGroupModal(index) {
+  currentVariableGroupIndex = index >= 0 ? index : -1;
+  document.getElementById('variableGroupModalTitle').textContent = currentVariableGroupIndex >= 0 ? '변수 그룹 수정' : '새 변수 그룹 추가';
+  var g = currentVariableGroupIndex >= 0 ? (config.variable_groups[currentVariableGroupIndex] || {}) : {};
+  document.getElementById('vg_name').value = g.name || '';
+  document.getElementById('vg_description').value = g.description || '';
+  renderVariableGroupItems(g.items || []);
+  makeSearchableSelects(document.getElementById('variableGroupModal'));
+  document.getElementById('variableGroupModal').classList.add('show');
+}
+function addVariableGroupItem() {
+  var items = getVariableGroupItems();
+  items.push({ key: '', value: '' });
+  renderVariableGroupItems(items);
+}
+function renderVariableGroupItems(items) {
+  var container = document.getElementById('vg_items');
+  var opts = getAllVariableOptions();
+  container.innerHTML = (items && items.length) ? items.map(function(it, idx){
+    var sel = '<option value="">선택</option>' + opts.map(function(o){ return '<option value="'+escHtml(o.value)+'"'+(o.value === it.value ? ' selected' : '')+'>'+escHtml(o.label)+'</option>'; }).join('');
+    return '<div class="kv-row" data-idx="'+idx+'"><input type="text" class="vg-key" placeholder="키" value="'+escHtml(it.key)+'"><select class="vg-value">'+sel+'</select><button type="button" class="item-delete-btn" onclick="this.closest(\'.kv-row\').remove()">×</button></div>';
+  }).join('') : '<p class="muted">+ 추가로 키/값을 넣으세요.</p>';
+  makeSearchableSelects(container);
+}
+function getVariableGroupItems() {
+  var container = document.getElementById('vg_items');
+  if (!container || !container.querySelector('.kv-row')) return [];
+  var rows = container.querySelectorAll('.kv-row');
+  var items = [];
+  rows.forEach(function(row){
+    var k = row.querySelector('.vg-key'); var v = row.querySelector('.vg-value');
+    if (k && v) items.push({ key: k.value, value: v.value });
+  });
+  return items;
+}
+function closeVariableGroupModal() { document.getElementById('variableGroupModal').classList.remove('show'); }
+function saveVariableGroup() {
+  var name = document.getElementById('vg_name').value.trim();
+  if (!name) { alert('변수 그룹명을 입력하세요.'); return; }
+  var items = getVariableGroupItems();
+  var g = { group_id: currentVariableGroupIndex >= 0 ? (config.variable_groups[currentVariableGroupIndex].group_id || 'vg_'+Date.now()) : ('vg_'+Date.now()), name: name, description: document.getElementById('vg_description').value, items: items };
+  if (currentVariableGroupIndex >= 0) {
+    config.variable_groups[currentVariableGroupIndex] = g;
+  } else {
+    config.variable_groups.push(g);
+  }
+  closeVariableGroupModal();
+  save().then(function(){ renderVariableGroups(); });
+}
+function deleteVariableGroup(index) {
+  if (!confirm('이 변수 그룹을 삭제하시겠습니까?')) return;
+  config.variable_groups.splice(index, 1);
+  save().then(function(){ renderVariableGroups(); });
+}
+
+function renderVariables() {
+  variables.innerHTML = config.variables.map((v,i)=>`
+    <div class="card row">
+      <input value="${escHtml(v.variable_code)}" placeholder="변수 코드" onchange="config.variables[${i}].variable_code=this.value">
+      <input value="${escHtml(v.variable_name)}" placeholder="변수명" onchange="config.variables[${i}].variable_name=this.value">
+      <input type="checkbox" class="toggle" ${v.enabled?'checked':''} onchange="config.variables[${i}].enabled=this.checked">
+      <button type="button" class="secondary detail-btn" onclick="openVariableDetail(${i})">상세 수정</button>
+      <button type="button" class="item-delete-btn" onclick="deleteVariable(${i})">삭제</button>
+    </div>
+  `).join("");
+}
+
+function renderTriggers() {
+  triggers.innerHTML = config.triggers.map((t,i)=>`
+    <div class="card row">
+      <input value="${escHtml(t.trigger_code)}" placeholder="트리거 코드" onchange="config.triggers[${i}].trigger_code=this.value">
+      <input value="${escHtml(t.trigger_name)}" placeholder="트리거명" onchange="config.triggers[${i}].trigger_name=this.value">
+      <input value="${escHtml(t.event_type)}" placeholder="이벤트 타입" onchange="config.triggers[${i}].event_type=this.value">
+      <input type="checkbox" class="toggle" ${t.enabled?'checked':''} onchange="config.triggers[${i}].enabled=this.checked">
+      <button type="button" class="secondary detail-btn" onclick="openTriggerDetail(${i})">상세 수정</button>
+      <button type="button" class="item-delete-btn" onclick="deleteTrigger(${i})">삭제</button>
+    </div>
+  `).join("");
+}
+
+function renderTags() {
+  var triggerNames = (config.triggers || []).reduce(function(acc, tr){ acc[tr.trigger_code] = tr.trigger_name || tr.trigger_code; return acc; }, {});
+  tags.innerHTML = config.tags.map((t,i)=>{
+    var trList = (t.triggers && t.triggers.length ? t.triggers : (t.trigger_code ? [t.trigger_code] : []));
+    var trLabel = trList.map(function(tc){ return triggerNames[tc] || tc; }).join(', ') || '-';
+    return `
+    <div class="card">
+      <div class="row tags-row">
+        <input value="${escHtml(t.tag_code)}" placeholder="태그 코드" onchange="config.tags[${i}].tag_code=this.value">
+        <input value="${escHtml(t.tag_name)}" placeholder="태그명" onchange="config.tags[${i}].tag_name=this.value">
+        <span class="muted" style="min-width:120px" title="${escHtml(trList.join(', '))}">${escHtml(trLabel)}</span>
+        <input type="number" value="${t.exec_order || 999}" placeholder="실행 순서" style="width:70px" onchange="config.tags[${i}].exec_order=Number(this.value)">
+        <input type="checkbox" class="toggle" ${t.enabled?'checked':''} onchange="config.tags[${i}].enabled=this.checked">
+        <button type="button" class="secondary detail-btn" onclick="openTagDetail(${i})">상세 수정</button>
+        <button type="button" class="item-delete-btn" onclick="deleteTag(${i})">삭제</button>
+      </div>
+      <textarea onchange="config.tags[${i}].func_js=this.value" placeholder="함수 코드">${escTextarea(t.func_js || '')}</textarea>
+    </div>
+  `;
+  }).join("");
+}
+
+function addVariable() {
+  config.variables.push({ variable_code:"", variable_name:"", enabled:true });
+  renderVariables();
+}
+
+function addTrigger() {
+  config.triggers.push({ trigger_code:"", trigger_name:"", event_type:"", enabled:true });
+  renderTriggers();
+}
+
+function addTag() {
+  config.tags.push({
+    tag_code:"",
+    tag_name:"",
+    tag_type:"script",
+    triggers:[],
+    trigger_code:"",
+    exec_order:999,
+    enabled:true,
+    func_js:"function trackerFunc(send){\n  return function(){}\n}"
+  });
+  renderTags();
+}
+
+// ---- 변수 상세 ----
+let currentVariableIndex = -1;
+const VAR_TYPES = { string:'문자열', number:'숫자', cookie:'쿠키', dom:'DOM요소', script:'스크립트', script_global:'스크립트 전역 변수' };
+const DOM_SEARCH_METHODS = { document:'문서전체에서 검색', child:'클릭된요소기준 하위 방향으로 검색', parent:'클릭된요소기준 상위 방향으로 검색', clicked:'클릭된 요소를 선택' };
+
+function openVariableDetail(i) {
+  currentVariableIndex = i;
+  const v = config.variables[i] || {};
+  document.getElementById('varDetail_code').value = v.variable_code || '';
+  document.getElementById('varDetail_name').value = v.variable_name || '';
+  document.getElementById('varDetail_description').value = v.description || '';
+  document.getElementById('varDetail_type').value = v.type || 'string';
+  document.getElementById('varDetail_enabled').checked = v.enabled !== false;
+  onVariableTypeChange();
+  const tc = v.type_config || {};
+  setTimeout(function(){
+    const type = document.getElementById('varDetail_type').value;
+    if (type === 'string') { var q = document.getElementById('varDetail_stringValue'); if(q) q.value = tc.value != null ? tc.value : ''; }
+    if (type === 'number') { var q = document.getElementById('varDetail_numberValue'); if(q) q.value = tc.value != null ? tc.value : ''; }
+    if (type === 'cookie') {
+      var q = document.getElementById('varDetail_cookieSetting'); if(q) q.value = tc.cookie_setting || '';
+      var c = document.getElementById('varDetail_urlDecode'); if(c) c.checked = !!tc.url_decode;
+    }
+    if (type === 'dom') {
+      var s = document.getElementById('varDetail_domSearchMethod'); if(s) s.value = tc.search_method || 'document';
+      onDomSearchMethodChange();
+      setTimeout(function(){
+        var q = document.getElementById('varDetail_domCssSelector'); if(q) q.value = tc.css_selector || '';
+        q = document.getElementById('varDetail_domAttrValue'); if(q) q.value = tc.attribute_value || '';
+        q = document.getElementById('varDetail_domTagValue'); if(q) q.value = tc.tag_value || '';
+        q = document.getElementById('varDetail_domOrder'); if(q) q.value = tc.order != null ? tc.order : 1;
+        q = document.getElementById('varDetail_domClickedAttr'); if(q) q.value = tc.clicked_attribute_value || '';
+      }, 10);
+    }
+    if (type === 'url') { var q = document.getElementById('varDetail_urlPart'); if(q) q.value = tc.part || 'path'; }
+    if (type === 'element') {
+      var q = document.getElementById('varDetail_elementAttr'); if(q) q.value = tc.attribute || 'text';
+      q = document.getElementById('varDetail_elementMaxLength'); if(q) q.value = tc.max_length != null ? tc.max_length : 500;
+      q = document.getElementById('varDetail_elementFallback'); if(q) q.value = tc.fallback_document || '';
+    }
+    if (type === 'script') { var q = document.getElementById('varDetail_script'); if(q) q.value = tc.script || ''; }
+    if (type === 'script_global') { var q = document.getElementById('varDetail_globalVar'); if(q) q.value = tc.variable || ''; }
+  }, 10);
+  makeSearchableSelects(document.getElementById('variableDetailModal'));
+  document.getElementById('variableDetailModal').classList.add('show');
+}
+function onVariableTypeChange() {
+  const type = document.getElementById('varDetail_type').value;
+  const container = document.getElementById('varDetail_typeFields');
+  let html = '';
+  if (type === 'string') {
+    html = '<div class="form-group"><label>문자열값 입력</label><input type="text" id="varDetail_stringValue" placeholder="문자열"></div>';
+  } else if (type === 'number') {
+    html = '<div class="form-group"><label>숫자값 입력</label><input type="number" id="varDetail_numberValue" placeholder="숫자"></div>';
+  } else if (type === 'cookie') {
+    html = '<div class="form-group"><label>쿠키 설정 입력</label><input type="text" id="varDetail_cookieSetting" placeholder="쿠키명 등"></div>';
+    html += '<div class="form-group"><label><input type="checkbox" id="varDetail_urlDecode"> URL 디코딩 여부</label></div>';
+  } else if (type === 'dom') {
+    html = '<div class="form-group"><label>검색 방법</label><select id="varDetail_domSearchMethod" onchange="onDomSearchMethodChange()">';
+    for (const [k, label] of Object.entries(DOM_SEARCH_METHODS)) html += '<option value="'+k+'">'+label+'</option>';
+    html += '</select></div><div id="varDetail_domFields"></div>';
+  } else if (type === 'url') {
+    html = '<div class="form-group"><label>URL 부분</label><select id="varDetail_urlPart">';
+    html += '<option value="path">path (경로)</option><option value="host">host</option><option value="href">href (전체 URL)</option>';
+    html += '<option value="referrer">referrer</option><option value="title">title (문서 제목)</option><option value="query">query (쿼리스트링)</option></select></div>';
+  } else if (type === 'element') {
+    html = '<div class="form-group"><label>클릭 요소 속성</label><select id="varDetail_elementAttr">';
+    html += '<option value="text">text (요소 텍스트)</option><option value="href">href</option><option value="id">id</option><option value="className">className</option>';
+    html += '<option value="data-id">data-id</option><option value="data-product-id">data-product-id</option></select></div>';
+    html += '<div class="form-group"><label>최대 길이 (0=제한없음)</label><input type="number" id="varDetail_elementMaxLength" value="500" min="0"></div>';
+    html += '<div class="form-group"><label>클릭 없을 때 (페이지뷰 등)</label><select id="varDetail_elementFallback"><option value="">없음</option><option value="title">document.title</option></select></div>';
+  } else if (type === 'script') {
+    html = '<div class="form-group"><label>스크립트 입력</label><textarea id="varDetail_script" rows="4" style="font-family:monospace"></textarea></div>';
+  } else if (type === 'script_global') {
+    html = '<div class="form-group"><label>변수 입력</label><input type="text" id="varDetail_globalVar" placeholder="전역 변수명"></div>';
+  }
+  container.innerHTML = html;
+  if (type === 'dom') onDomSearchMethodChange();
+  makeSearchableSelects(container);
+}
+function onDomSearchMethodChange() {
+  const method = document.getElementById('varDetail_domSearchMethod').value;
+  const container = document.getElementById('varDetail_domFields');
+  if (!container) return;
+  let html = '';
+  if (method === 'document' || method === 'child') {
+    html = '<div class="form-group"><label>CSS선택자 입력</label><input type="text" id="varDetail_domCssSelector" placeholder=".class or #id"></div>';
+    html += '<div class="form-group"><label>속성값 입력</label><input type="text" id="varDetail_domAttrValue" placeholder="속성값"></div>';
+  } else if (method === 'parent') {
+    html = '<div class="form-group"><label>태그값 입력</label><input type="text" id="varDetail_domTagValue" placeholder="DIV, SPAN 등"></div>';
+    html += '<div class="form-group"><label>순서 (동일 태그명 부모 중 순서, 1=가장 가까움)</label><input type="number" id="varDetail_domOrder" value="1" min="1"></div>';
+    html += '<div class="form-group"><label>속성값 입력</label><input type="text" id="varDetail_domAttrValue" placeholder="속성값"></div>';
+  }
+  if (method === 'clicked' || method === 'parent' || method === 'document' || method === 'child') {
+    if (method === 'clicked') html = '<div class="form-group"><label>속성값 입력</label><input type="text" id="varDetail_domClickedAttr" placeholder="속성값"></div>';
+    else if (method !== 'parent') html += '<div class="form-group"><label>클릭된 요소 속성값</label><input type="text" id="varDetail_domClickedAttr" placeholder="속성값"></div>';
+  }
+  container.innerHTML = html;
+  makeSearchableSelects(container);
+}
+function getVariableTypeConfig() {
+  const type = document.getElementById('varDetail_type').value;
+  const tc = {};
+  if (type === 'string') tc.value = document.getElementById('varDetail_stringValue').value;
+  else if (type === 'number') tc.value = document.getElementById('varDetail_numberValue').value;
+  else if (type === 'cookie') {
+    tc.cookie_setting = document.getElementById('varDetail_cookieSetting').value;
+    tc.url_decode = document.getElementById('varDetail_urlDecode').checked;
+  } else if (type === 'dom') {
+    tc.search_method = document.getElementById('varDetail_domSearchMethod').value;
+    tc.css_selector = document.getElementById('varDetail_domCssSelector') ? document.getElementById('varDetail_domCssSelector').value : '';
+    tc.attribute_value = document.getElementById('varDetail_domAttrValue') ? document.getElementById('varDetail_domAttrValue').value : '';
+    tc.tag_value = document.getElementById('varDetail_domTagValue') ? document.getElementById('varDetail_domTagValue').value : '';
+    tc.order = document.getElementById('varDetail_domOrder') ? parseInt(document.getElementById('varDetail_domOrder').value, 10) || 1 : 1;
+    tc.clicked_attribute_value = document.getElementById('varDetail_domClickedAttr') ? document.getElementById('varDetail_domClickedAttr').value : '';
+  } else if (type === 'url') {
+    var q = document.getElementById('varDetail_urlPart'); tc.part = q ? q.value : 'path';
+  } else if (type === 'element') {
+    var q = document.getElementById('varDetail_elementAttr'); tc.attribute = q ? q.value : 'text';
+    q = document.getElementById('varDetail_elementMaxLength'); tc.max_length = q ? (parseInt(q.value, 10) || 500) : 500;
+    q = document.getElementById('varDetail_elementFallback'); tc.fallback_document = q ? q.value : '';
+  } else if (type === 'script') tc.script = document.getElementById('varDetail_script').value;
+  else if (type === 'script_global') tc.variable = document.getElementById('varDetail_globalVar').value;
+  return tc;
+}
+function closeVariableDetail() { document.getElementById('variableDetailModal').classList.remove('show'); }
+function saveVariableDetail() {
+  const code = document.getElementById('varDetail_code').value.trim();
+  if (!code) { alert('변수명(코드)을 입력하세요.'); return; }
+  const v = config.variables[currentVariableIndex] || {};
+  v.variable_code = code;
+  v.variable_name = document.getElementById('varDetail_name').value.trim();
+  v.description = document.getElementById('varDetail_description').value;
+  v.type = document.getElementById('varDetail_type').value;
+  v.type_config = getVariableTypeConfig();
+  v.enabled = document.getElementById('varDetail_enabled').checked;
+  config.variables[currentVariableIndex] = v;
+  closeVariableDetail();
+  save().then(function(){ renderVariables(); });
+}
+
+// ---- 트리거 상세 ----
+let currentTriggerIndex = -1;
+const TRIGGER_OPERATORS = ['같음','같지 않음','포함','포함하지 않음','다음으로 시작','다음으로 시작하지 않음','다음으로 끝남','다음으로 끝나지 않음','정규 표현식과 일치','정규 표현식과 일치 하지 않음','미만','이하','초과','이상','유효함','유효하지 않음'];
+
+function openTriggerDetail(i) {
+  currentTriggerIndex = i;
+  const t = config.triggers[i] || {};
+  document.getElementById('trigDetail_code').value = t.trigger_code || '';
+  document.getElementById('trigDetail_name').value = t.trigger_name || '';
+  document.getElementById('trigDetail_description').value = t.description || '';
+  document.getElementById('trigDetail_eventType').value = t.event_type || 'dom_ready';
+  document.getElementById('trigDetail_enabled').checked = t.enabled !== false;
+  onTriggerEventTypeChange();
+  const ef = t.event_config || {};
+  setTimeout(function(){
+    var q = document.getElementById('trigDetail_cssSelector'); if(q) q.value = ef.css_selector || '';
+    q = document.getElementById('trigDetail_targetTag'); if(q) q.value = ef.target_tag || '';
+    q = document.getElementById('trigDetail_customEventName'); if(q) q.value = ef.event_name || '';
+  }, 0);
+  renderTriggerConditions(t.conditions || []);
+  makeSearchableSelects(document.getElementById('triggerDetailModal'));
+  document.getElementById('triggerDetailModal').classList.add('show');
+}
+function onTriggerEventTypeChange() {
+  const et = document.getElementById('trigDetail_eventType').value;
+  const container = document.getElementById('trigDetail_eventFields');
+  let html = '';
+  if (et === 'element_click') html = '<div class="form-group"><label>CSS선택자 입력</label><input type="text" id="trigDetail_cssSelector" placeholder=".btn-submit"></div>';
+  else if (et === 'click') html = '<div class="form-group"><label>목적 태그명 입력</label><input type="text" id="trigDetail_targetTag" placeholder="A, BUTTON 등"></div>';
+  else if (et === 'custom') html = '<div class="form-group"><label>이벤트명 입력</label><input type="text" id="trigDetail_customEventName" placeholder="이벤트명"></div>';
+  container.innerHTML = html;
+  makeSearchableSelects(container);
+}
+function formatConditionValueForInput(v) {
+  if (v === true || v === 'true') return 'true';
+  if (v === false || v === 'false') return 'false';
+  if (v == null) return '';
+  return String(v);
+}
+function parseConditionValueFromInput(str) {
+  if (str === '') return '';
+  if (str === 'true') return true;
+  if (str === 'false') return false;
+  const n = Number(str);
+  if (str.trim() !== '' && !isNaN(n)) return n;
+  return str;
+}
+function renderTriggerConditions(conditions) {
+  const container = document.getElementById('trigDetail_conditions');
+  const varOptsList = getAllVariableOptions();
+  container.innerHTML = (conditions || []).map(function(c, idx) {
+    let varOpts = '<option value="">선택</option>' + varOptsList.map(function(o){ return '<option value="'+escHtml(o.value)+'"'+(c.variable === o.value ? ' selected' : '')+'>'+escHtml(o.label)+'</option>'; }).join('');
+    let opOpts = TRIGGER_OPERATORS.map(function(o){ return '<option value="'+o+'"'+(c.operator === o ? ' selected' : '')+'>'+o+'</option>'; }).join('');
+    var valDisplay = formatConditionValueForInput(c.value);
+    return '<div class="form-group" style="display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;align-items:center">'+
+      '<select class="cond-variable">'+varOpts+'</select>'+
+      '<select class="cond-operator">'+opOpts+'</select>'+
+      '<input type="text" class="cond-value" placeholder="값 입력 (true, false, 문자열, 숫자)" value="'+escHtml(valDisplay)+'">'+
+      '<button type="button" class="item-delete-btn" onclick="removeTriggerCondition(this)">×</button></div>';
+  }).join('');
+  makeSearchableSelects(container);
+}
+function addTriggerCondition() {
+  const conditions = getTriggerConditions();
+  const first = getAllVariableOptions()[0];
+  conditions.push({ variable: first ? first.value : '', operator: '같음', value: '' });
+  renderTriggerConditions(conditions);
+}
+function removeTriggerCondition(btn) { btn.closest('.form-group').remove(); }
+function getTriggerConditions() {
+  const container = document.getElementById('trigDetail_conditions');
+  const rows = container.querySelectorAll('.form-group');
+  const conditions = [];
+  rows.forEach(function(row) {
+    const v = row.querySelector('.cond-variable'); const o = row.querySelector('.cond-operator'); const val = row.querySelector('.cond-value');
+    if (v && o && val) conditions.push({ variable: v.value, operator: o.value, value: parseConditionValueFromInput(val.value) });
+  });
+  return conditions;
+}
+function closeTriggerDetail() { document.getElementById('triggerDetailModal').classList.remove('show'); }
+function saveTriggerDetail() {
+  const code = document.getElementById('trigDetail_code').value.trim();
+  if (!code) { alert('트리거 코드를 입력하세요.'); return; }
+  const t = config.triggers[currentTriggerIndex] || {};
+  t.trigger_code = code;
+  t.trigger_name = document.getElementById('trigDetail_name').value.trim();
+  t.description = document.getElementById('trigDetail_description').value;
+  t.event_type = document.getElementById('trigDetail_eventType').value;
+  t.event_config = {};
+  const et = t.event_type;
+  var q = document.getElementById('trigDetail_cssSelector'); if(q) t.event_config.css_selector = q.value;
+  q = document.getElementById('trigDetail_targetTag'); if(q) t.event_config.target_tag = q.value;
+  q = document.getElementById('trigDetail_customEventName'); if(q) t.event_config.event_name = q.value;
+  t.conditions = getTriggerConditions();
+  t.enabled = document.getElementById('trigDetail_enabled').checked;
+  config.triggers[currentTriggerIndex] = t;
+  closeTriggerDetail();
+  save().then(function(){ renderTriggers(); });
+}
+
+// ---- 태그 상세 ----
+let currentTagIndex = -1;
+function onTagTypeChange() {
+  var type = document.getElementById('tagDetail_type').value;
+  document.getElementById('tagDetail_scriptBlock').style.display = type === 'script' ? 'block' : 'none';
+  document.getElementById('tagDetail_nloggerBlock').style.display = type === 'nlogger' ? 'block' : 'none';
+}
+function onTagLogTypeChange() {
+  document.getElementById('tagDetail_logTypePathWrap').style.display = document.getElementById('tagDetail_logType').value === 'custom' ? 'block' : 'none';
+}
+function makeTagKvRow(containerId, className, items, valueSelected) {
+  var opts = getAllVariableOptions();
+  var optsHtml = '<option value="">선택</option>' + opts.map(function(o){ return '<option value="'+escHtml(o.value)+'"'+(valueSelected === o.value ? ' selected' : '')+'>'+escHtml(o.label)+'</option>'; }).join('');
+  var row = document.createElement('div');
+  row.className = 'kv-row';
+  row.innerHTML = '<input type="text" class="'+className+'-key" placeholder="키" value="'+escHtml((items&&items.key)||'')+'"><select class="'+className+'-value">'+optsHtml+'</select><button type="button" class="item-delete-btn" onclick="this.closest(\'.kv-row\').remove()">×</button>';
+  document.getElementById(containerId).appendChild(row);
+  makeSearchableSelects(row);
+}
+function addTagParamRow() {
+  var container = document.getElementById('tagDetail_params');
+  var rows = container.querySelectorAll('.kv-row');
+  var lastVal = rows.length ? rows[rows.length-1].querySelector('.tag-param-value').value : '';
+  makeTagKvRow('tagDetail_params', 'tag-param', { key: '', value: lastVal }, lastVal);
+}
+function addTagCookieRow() {
+  var container = document.getElementById('tagDetail_cookies');
+  var rows = container.querySelectorAll('.kv-row');
+  var lastVal = rows.length ? rows[rows.length-1].querySelector('.tag-cookie-value').value : '';
+  makeTagKvRow('tagDetail_cookies', 'tag-cookie', { key: '', value: lastVal }, lastVal);
+}
+function fillTagDetailGroupSelects() {
+  var groups = config.variable_groups || [];
+  var selParam = document.getElementById('tagDetail_paramGroupSelect');
+  var selCookie = document.getElementById('tagDetail_cookieGroupSelect');
+  if (selParam) { selParam.innerHTML = '<option value="">변수 그룹 선택</option>' + groups.map(function(g,i){ return '<option value="'+i+'">'+escHtml(g.name||g.group_id)+'</option>'; }).join(''); }
+  if (selCookie) { selCookie.innerHTML = '<option value="">변수 그룹 선택</option>' + groups.map(function(g,i){ return '<option value="'+i+'">'+escHtml(g.name||g.group_id)+'</option>'; }).join(''); }
+}
+function addTagParamGroup() {
+  var sel = document.getElementById('tagDetail_paramGroupSelect');
+  if (!sel || sel.value === '') { alert('변수 그룹을 선택한 뒤 + 그룹추가를 누르세요.'); return; }
+  var idx = parseInt(sel.value, 10);
+  var groups = config.variable_groups || [];
+  if (isNaN(idx) || idx < 0 || idx >= groups.length) return;
+  var g = groups[idx];
+  var items = g.items || [];
+  items.forEach(function(it){ addTagParamRow(); });
+  var rows = document.getElementById('tagDetail_params').querySelectorAll('.kv-row');
+  var start = rows.length - items.length;
+  items.forEach(function(it, i){ var r = rows[start+i]; if(r){ var k=r.querySelector('.tag-param-key'); var v=r.querySelector('.tag-param-value'); if(k)k.value=it.key; if(v)v.value=it.value; } });
+}
+function addTagCookieGroup() {
+  var sel = document.getElementById('tagDetail_cookieGroupSelect');
+  if (!sel || sel.value === '') { alert('변수 그룹을 선택한 뒤 + 그룹추가를 누르세요.'); return; }
+  var idx = parseInt(sel.value, 10);
+  var groups = config.variable_groups || [];
+  if (isNaN(idx) || idx < 0 || idx >= groups.length) return;
+  var g = groups[idx];
+  var items = g.items || [];
+  items.forEach(function(it){ addTagCookieRow(); });
+  var rows = document.getElementById('tagDetail_cookies').querySelectorAll('.kv-row');
+  var start = rows.length - items.length;
+  items.forEach(function(it, i){ var r = rows[start+i]; if(r){ var k=r.querySelector('.tag-cookie-key'); var v=r.querySelector('.tag-cookie-value'); if(k)k.value=it.key; if(v)v.value=it.value; } });
+}
+function getTagParamRows() {
+  var container = document.getElementById('tagDetail_params');
+  var rows = container ? container.querySelectorAll('.kv-row') : [];
+  var out = [];
+  rows.forEach(function(r){ var k=r.querySelector('.tag-param-key'); var v=r.querySelector('.tag-param-value'); if(k&&v) out.push({key:k.value, value:v.value}); });
+  return out;
+}
+function getTagCookieRows() {
+  var container = document.getElementById('tagDetail_cookies');
+  var rows = container ? container.querySelectorAll('.kv-row') : [];
+  var out = [];
+  rows.forEach(function(r){ var k=r.querySelector('.tag-cookie-key'); var v=r.querySelector('.tag-cookie-value'); if(k&&v) out.push({key:k.value, value:v.value}); });
+  return out;
+}
+function openTagDetail(i) {
+  currentTagIndex = i;
+  const t = config.tags[i] || {};
+  document.getElementById('tagDetail_code').value = t.tag_code || '';
+  document.getElementById('tagDetail_name').value = t.tag_name || '';
+  document.getElementById('tagDetail_description').value = t.description || '';
+  document.getElementById('tagDetail_runAny').checked = !!t.run_condition_any;
+  document.getElementById('tagDetail_funcJs').value = t.func_js || '';
+  document.getElementById('tagDetail_enabled').checked = t.enabled !== false;
+  document.getElementById('tagDetail_type').value = t.tag_type === 'nlogger' ? 'nlogger' : 'script';
+  onTagTypeChange();
+  document.getElementById('tagDetail_sendMethod').value = t.send_method || 'default';
+  document.getElementById('tagDetail_logType').value = t.log_type || 'default';
+  document.getElementById('tagDetail_logTypePath').value = t.log_type_path || '';
+  document.getElementById('tagDetail_logTypePathWrap').style.display = (t.log_type === 'custom') ? 'block' : 'none';
+  renderTagRunConditions(t.run_conditions || []);
+  renderTagExceptConditions(t.except_conditions || []);
+  var paramsContainer = document.getElementById('tagDetail_params');
+  paramsContainer.innerHTML = '';
+  (t.parameters || []).forEach(function(p){ addTagParamRow(); });
+  var paramRows = paramsContainer.querySelectorAll('.kv-row');
+  (t.parameters || []).forEach(function(p, idx){ var r=paramRows[idx]; if(r){ var k=r.querySelector('.tag-param-key'); var v=r.querySelector('.tag-param-value'); if(k)k.value=p.key; if(v)v.value=p.value; } });
+  paramRows.forEach(function(r){ var v=r.querySelector('.tag-param-value'); if(v) refreshSearchableSelectDisplay(v); });
+  var cookiesContainer = document.getElementById('tagDetail_cookies');
+  cookiesContainer.innerHTML = '';
+  (t.cookies || []).forEach(function(){ addTagCookieRow(); });
+  var cookieRows = cookiesContainer.querySelectorAll('.kv-row');
+  (t.cookies || []).forEach(function(c, idx){ var r=cookieRows[idx]; if(r){ var k=r.querySelector('.tag-cookie-key'); var v=r.querySelector('.tag-cookie-value'); if(k)k.value=c.key; if(v)v.value=c.value; } });
+  cookieRows.forEach(function(r){ var v=r.querySelector('.tag-cookie-value'); if(v) refreshSearchableSelectDisplay(v); });
+  fillTagDetailGroupSelects();
+  makeSearchableSelects(document.getElementById('tagDetailModal'));
+  document.getElementById('tagDetailModal').classList.add('show');
+}
+function renderTagRunConditions(list) {
+  const container = document.getElementById('tagDetail_runConditions');
+  container.innerHTML = (list || []).map(function(c) {
+    let opts = (config.triggers || []).map(function(tr){ return '<option value="'+escHtml(tr.trigger_code)+'"'+(c.trigger_code === tr.trigger_code ? ' selected' : '')+'>'+escHtml(tr.trigger_name || tr.trigger_code)+'</option>'; }).join('');
+    return '<div class="form-group" style="display:flex;gap:8px;align-items:center"><select class="tag-cond-trigger">'+opts+'</select><button type="button" class="item-delete-btn" onclick="this.parentElement.remove()">×</button></div>';
+  }).join('');
+  makeSearchableSelects(container);
+}
+function renderTagExceptConditions(list) {
+  const container = document.getElementById('tagDetail_exceptConditions');
+  container.innerHTML = (list || []).map(function(c) {
+    let opts = (config.triggers || []).map(function(tr){ return '<option value="'+escHtml(tr.trigger_code)+'"'+(c.trigger_code === tr.trigger_code ? ' selected' : '')+'>'+escHtml(tr.trigger_name || tr.trigger_code)+'</option>'; }).join('');
+    return '<div class="form-group" style="display:flex;gap:8px;align-items:center"><select class="tag-except-trigger">'+opts+'</select><button type="button" class="item-delete-btn" onclick="this.parentElement.remove()">×</button></div>';
+  }).join('');
+  makeSearchableSelects(container);
+}
+function addTagRunCondition() {
+  const list = getTagRunConditions();
+  list.push({ trigger_code: (config.triggers[0] && config.triggers[0].trigger_code) || '' });
+  renderTagRunConditions(list);
+}
+function addTagExceptCondition() {
+  const list = getTagExceptConditions();
+  list.push({ trigger_code: (config.triggers[0] && config.triggers[0].trigger_code) || '' });
+  renderTagExceptConditions(list);
+}
+function getTagRunConditions() {
+  const container = document.getElementById('tagDetail_runConditions');
+  const selects = container.querySelectorAll('.tag-cond-trigger');
+  return Array.from(selects).map(function(s){ return { trigger_code: s.value }; });
+}
+function getTagExceptConditions() {
+  const container = document.getElementById('tagDetail_exceptConditions');
+  const selects = container.querySelectorAll('.tag-except-trigger');
+  return Array.from(selects).map(function(s){ return { trigger_code: s.value }; });
+}
+function closeTagDetail() { document.getElementById('tagDetailModal').classList.remove('show'); }
+function saveTagDetail() {
+  const code = document.getElementById('tagDetail_code').value.trim();
+  if (!code) { alert('태그 코드를 입력하세요.'); return; }
+  const t = config.tags[currentTagIndex] || {};
+  t.tag_code = code;
+  t.tag_name = document.getElementById('tagDetail_name').value.trim();
+  t.description = document.getElementById('tagDetail_description').value;
+  t.run_condition_any = document.getElementById('tagDetail_runAny').checked;
+  t.run_conditions = getTagRunConditions();
+  t.except_conditions = getTagExceptConditions();
+  var runTriggers = [];
+  (t.run_conditions || []).forEach(function(c){ if (c.trigger_code && runTriggers.indexOf(c.trigger_code) === -1) runTriggers.push(c.trigger_code); });
+  t.triggers = runTriggers;
+  t.trigger_code = runTriggers[0] || '';
+  t.exec_order = t.exec_order != null ? t.exec_order : 999;
+  t.tag_type = document.getElementById('tagDetail_type').value;
+  if (t.tag_type === 'script') {
+    t.func_js = document.getElementById('tagDetail_funcJs').value;
+  } else {
+    t.send_method = document.getElementById('tagDetail_sendMethod').value;
+    t.log_type = document.getElementById('tagDetail_logType').value;
+    t.log_type_path = document.getElementById('tagDetail_logTypePath').value;
+    t.parameters = getTagParamRows();
+    t.cookies = getTagCookieRows();
+    t.func_js = '';
+  }
+  t.enabled = document.getElementById('tagDetail_enabled').checked;
+  config.tags[currentTagIndex] = t;
+  closeTagDetail();
+  save().then(function(){ renderTags(); });
+}
+
+async function deleteVariable(index) {
+  if (!confirm("이 변수를 삭제하시겠습니까?")) return;
+  config.variables.splice(index, 1);
+  await save();
+  renderVariables();
+}
+
+async function deleteTrigger(index) {
+  if (!confirm("이 트리거를 삭제하시겠습니까?")) return;
+  config.triggers.splice(index, 1);
+  await save();
+  renderTriggers();
+}
+
+async function deleteTag(index) {
+  if (!confirm("이 태그를 삭제하시겠습니까?")) return;
+  config.tags.splice(index, 1);
+  await save();
+  renderTags();
+}
+
+async function save() {
+  try {
+    const res = await fetch("/admin/config", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(config)
+    });
+    if (res.status === 401) { window.location.href = "/static/login.html"; return; }
+    if (res.status === 403) { window.location.href = "/static/dashboard.html"; return; }
+    alert("저장되었습니다.");
+  } catch (error) {
+    console.error("저장 실패:", error);
+    alert("저장에 실패했습니다.");
+  }
+}
+
+function openDeployModal() {
+  document.getElementById("deployName").value = "";
+  document.getElementById("deployAffiliation").value = "";
+  document.getElementById("deployComment").value = "";
+  document.getElementById("deployModal").classList.add("show");
+}
+function closeDeployModal() {
+  document.getElementById("deployModal").classList.remove("show");
+}
+async function confirmDeploy() {
+  const name = document.getElementById("deployName").value.trim();
+  const affiliation = document.getElementById("deployAffiliation").value.trim();
+  const comment = document.getElementById("deployComment").value.trim();
+  try {
+    const res = await fetch("/admin/deploy", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, affiliation, comment })
+    });
+    if (res.status === 401) {
+      window.location.href = "/static/login.html";
+      return;
+    }
+    const data = await res.json();
+    closeDeployModal();
+    let msg = "게시되었습니다.\n버전: " + data.version;
+    if (data.name) msg += "\n이름: " + data.name;
+    if (data.affiliation) msg += "\n소속: " + data.affiliation;
+    if (data.comment) msg += "\n코멘트: " + data.comment;
+    alert(msg);
+    loadDeployVersions();
+  } catch (error) {
+    console.error("게시 실패:", error);
+    alert("게시에 실패했습니다.");
+  }
+}
+
+async function loadDeployVersions() {
+  const listEl = document.getElementById("deployHistoryList");
+  const currentEl = document.getElementById("currentVersionText");
+  try {
+    const res = await fetch("/admin/deploy/versions");
+    if (res.status === 401) {
+      window.location.href = "/static/login.html";
+      return;
+    }
+    const data = await res.json();
+    const cur = data.current;
+    if (cur) {
+      let t = "현재 게시된 버전: " + cur.version;
+      if (cur.deployed_by_name || cur.deployed_by_affiliation)
+        t += " | " + [cur.deployed_by_name, cur.deployed_by_affiliation].filter(Boolean).join(" · ");
+      if (cur.comment) t += " | " + cur.comment;
+      currentEl.textContent = t;
+    } else {
+      currentEl.textContent = "현재 게시된 버전: 없음";
+    }
+    const versions = data.versions || [];
+    if (versions.length === 0) {
+      listEl.innerHTML = "<p class=\"muted\">게시 이력이 없습니다.</p>";
+      return;
+    }
+    function esc(s) {
+      if (!s) return "";
+      return String(s)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+    listEl.innerHTML = `
+      <div class="version-row header">
+        <span>버전</span>
+        <span>이름</span>
+        <span>소속</span>
+        <span>코멘트</span>
+        <span>게시일시</span>
+        <span></span>
+        <span></span>
+      </div>
+    ` + versions.map(v => `
+      <div class="version-row">
+        <span><strong>${esc(v.version)}</strong></span>
+        <span class="muted">${esc(v.deployed_by_name) || "-"}</span>
+        <span class="muted">${esc(v.deployed_by_affiliation) || "-"}</span>
+        <span class="muted">${esc(v.comment) || "-"}</span>
+        <span class="muted" style="font-size:12px">${v.deployed_at ? esc(v.deployed_at.replace("T"," ").slice(0,19)) : ""}</span>
+        <button class="secondary rollback-btn" data-version="${esc(v.version)}" onclick="rollback(this.dataset.version)">되돌리기</button>
+        <button class="delete-btn" data-version="${esc(v.version)}" onclick="deleteVersion(this.dataset.version)">삭제</button>
+      </div>
+    `).join("");
+  } catch (e) {
+    listEl.innerHTML = "<p class=\"muted\">게시 이력을 불러올 수 없습니다.</p>";
+    currentEl.textContent = "현재 게시된 버전: -";
+  }
+}
+
+async function rollback(version) {
+  if (!confirm("정말로 버전 " + version + "(으)로 되돌리시겠습니까? 현재 적용 중인 설정이 해당 버전으로 교체됩니다.")) return;
+  try {
+    const res = await fetch("/admin/deploy/rollback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ version })
+    });
+    if (res.status === 401) {
+      window.location.href = "/static/login.html";
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json();
+      alert(err.detail || "롤백에 실패했습니다.");
+      return;
+    }
+    const data = await res.json();
+    alert(data.message || "롤백되었습니다.");
+    loadDeployVersions();
+    await load();
+  } catch (error) {
+    console.error("롤백 실패:", error);
+    alert("롤백에 실패했습니다.");
+  }
+}
+
+async function deleteVersion(version) {
+  if (!confirm("버전 " + version + " 이력을 삭제하시겠습니까?\n(현재 적용 중인 설정에는 영향을 주지 않습니다.)")) return;
+  try {
+    const res = await fetch("/admin/deploy/versions/" + encodeURIComponent(version), { method: "DELETE" });
+    if (res.status === 401) {
+      window.location.href = "/static/login.html";
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.detail || "삭제에 실패했습니다.");
+      return;
+    }
+    const data = await res.json();
+    alert(data.message || "삭제되었습니다.");
+    loadDeployVersions();
+  } catch (error) {
+    console.error("삭제 실패:", error);
+    alert("삭제에 실패했습니다.");
+  }
+}
+
+load();
+
+(function setKafkaUiLink() {
+  var el = document.getElementById('btnKafkaUi');
+  if (el) {
+    var base = window.location.protocol + '//' + window.location.hostname + ':18080';
+    el.href = base + '/ui/clusters/local/topics/test';
+  }
+})();
+</script>
+
+</body>
+</html>
