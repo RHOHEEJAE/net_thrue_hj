@@ -413,7 +413,7 @@
     });
     const pageviewPayload = buildCollectPayload(
       {
-        channel: varValues.channel || "Rround",
+        channel: varValues.channel || "Kream",
         page_id: varValues.page_id || "",
         act_type: "pageview",
         referer_url: varValues.referrer || ""
@@ -429,7 +429,7 @@
     const varValues = getMergedVariableValues({}, null);
     const payload = buildCollectPayload(
       {
-        channel: varValues.channel || "Rround",
+        channel: varValues.channel || "Kream",
         page_id: varValues.page_id || "",
         act_type: "pageview",
         referer_url: varValues.referrer || ""
@@ -515,7 +515,7 @@
           lastFiredTriggerCode = triggerCode;
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: varValues.channel || "Kream",
               page_id: varValues.page_id || "",
               act_type: "click",
               referer_url: varValues.referrer || "",
@@ -592,7 +592,7 @@
           const varValues = getMergedVariableValues({}, null);
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: varValues.channel || "Kream",
               page_id: varValues.page_id || "",
               act_type: "scroll",
               referer_url: varValues.referrer || "",
@@ -659,7 +659,7 @@
             (eventName === "scroll" ? "scroll" : eventName === "pv" || eventName === "pvDetail" || eventName === "url_change" ? "pageview" : eventName === "impression" || eventName === "Scroll_Impression" ? "impression" : eventName === "enter" || eventName === "click_touch" ? "click" : "custom");
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: varValues.channel || "Kream",
               page_id: varValues.page_id || "",
               act_type: actType,
               referer_url: varValues.referrer || ""

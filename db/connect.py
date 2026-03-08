@@ -1,11 +1,41 @@
 import os
 import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
+
+_pool = None
+
+
+def _get_pool():
+    global _pool
+    if _pool is not None:
+        return _pool
+
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        # Supabase connection pooler URL (Transaction mode, port 6543)
+        _pool = ThreadedConnectionPool(minconn=1, maxconn=10, dsn=database_url)
+    else:
+        # 로컬 개발용 개별 파라미터
+        _pool = ThreadedConnectionPool(
+            minconn=1,
+            maxconn=10,
+            host=os.environ.get("POSTGRES_HOST", "localhost"),
+            port=int(os.environ.get("POSTGRES_PORT", "5432")),
+            dbname=os.environ.get("POSTGRES_DB", "testdb"),
+            user=os.environ.get("POSTGRES_USER", "testuser"),
+            password=os.environ.get("POSTGRES_PASSWORD", "testpass"),
+        )
+    return _pool
+
 
 def get_db_conn():
-    return psycopg2.connect(
-        host=os.environ.get("POSTGRES_HOST", "localhost"),
-        port=int(os.environ.get("POSTGRES_PORT", "5432")),
-        dbname=os.environ.get("POSTGRES_DB", "testdb"),
-        user=os.environ.get("POSTGRES_USER", "testuser"),
-        password=os.environ.get("POSTGRES_PASSWORD", "testpass"),
-    )
+    """커넥션 풀에서 연결 반환. 사용 후 반드시 conn.close() 호출 (풀에 반납)."""
+    return _get_pool().getconn()
+
+
+def release_db_conn(conn):
+    """커넥션을 풀에 명시적으로 반납. get_db_conn() 사용 후 finally에서 호출."""
+    try:
+        _get_pool().putconn(conn)
+    except Exception:
+        pass
