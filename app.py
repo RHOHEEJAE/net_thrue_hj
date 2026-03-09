@@ -6,6 +6,9 @@ from datetime import datetime, date, timedelta
 import os
 import secrets
 from typing import Optional
+from dotenv import load_dotenv
+
+load_dotenv()  # .env 파일 로드 (로컬 개발용, Vercel에서는 환경변수 직접 주입)
 
 from repo.config_repo import (
     get_variables, get_variables_full, upsert_variables, replace_variables,

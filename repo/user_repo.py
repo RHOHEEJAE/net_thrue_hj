@@ -1,4 +1,4 @@
-from db.connect import get_db_conn
+from db.connect import get_db_conn, release_db_conn
 import hashlib
 from typing import Optional, Tuple, List, Dict, Any
 
@@ -26,7 +26,7 @@ def create_user(username: str, password: str) -> bool:
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def verify_user(username: str, password: str) -> Tuple[bool, Optional[str], Optional[str]]:
@@ -63,7 +63,7 @@ def verify_user(username: str, password: str) -> Tuple[bool, Optional[str], Opti
         if cur:
             cur.close()
         if conn:
-            conn.close()
+            release_db_conn(conn)
 
 
 def get_user(username: str) -> Optional[Dict[str, Any]]:
@@ -97,7 +97,7 @@ def get_user(username: str) -> Optional[Dict[str, Any]]:
         return None
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def list_all_users() -> List[Dict[str, Any]]:
@@ -131,7 +131,7 @@ def list_all_users() -> List[Dict[str, Any]]:
         return out
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def approve_user(username: str, role: str, approved_by: str) -> bool:
@@ -152,4 +152,4 @@ def approve_user(username: str, role: str, approved_by: str) -> bool:
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)

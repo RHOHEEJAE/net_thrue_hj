@@ -5,7 +5,7 @@ import json
 from datetime import datetime, date
 from typing import Any, Optional
 
-from db.connect import get_db_conn
+from db.connect import get_db_conn, release_db_conn
 
 
 def _parse_server_ts(server_ts: Any) -> date:
@@ -65,7 +65,7 @@ def insert_raw_event(event: dict) -> Optional[int]:
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def upsert_agg_page_events(stat_date: date, page_id: str, channel: str, act_type: str, event_trigger: str):
@@ -91,7 +91,7 @@ def upsert_agg_page_events(stat_date: date, page_id: str, channel: str, act_type
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def upsert_agg_heatmap(stat_date: date, page_id: str, channel: str, heatmap_type: str, segment_key: str):
@@ -117,7 +117,7 @@ def upsert_agg_heatmap(stat_date: date, page_id: str, channel: str, heatmap_type
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def process_event_aggregations(event: dict, stat_date: date):
@@ -211,7 +211,7 @@ def run_funnel_daily_aggregation(stat_date: date):
         raise e
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 # ---------- 대시보드 조회 ----------
@@ -255,7 +255,7 @@ def get_agg_page_events(date_from: date, date_to: date, group_by: str, page_id_f
         return out
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def get_distinct_channels(date_from: date, date_to: date) -> list:
@@ -272,7 +272,7 @@ def get_distinct_channels(date_from: date, date_to: date) -> list:
         return [r[0] for r in cur.fetchall()]
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def get_overview_metrics(
@@ -367,7 +367,7 @@ def get_overview_metrics(
         return result
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def get_funnel_definitions():
@@ -378,7 +378,7 @@ def get_funnel_definitions():
         return [{"id": r[0], "funnel_code": r[1], "funnel_name": r[2], "steps": r[3], "enabled": r[4]} for r in cur.fetchall()]
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def get_agg_funnel_daily(date_from: date, date_to: date, funnel_id: Optional[int] = None):
@@ -409,7 +409,7 @@ def get_agg_funnel_daily(date_from: date, date_to: date, funnel_id: Optional[int
         return out
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)
 
 
 def get_agg_heatmap(date_from: date, date_to: date, page_id_filter: Optional[str] = None, heatmap_type: Optional[str] = None, channel_filter: Optional[str] = None, limit: int = 500):
@@ -449,4 +449,4 @@ def get_agg_heatmap(date_from: date, date_to: date, page_id_filter: Optional[str
         return out
     finally:
         cur.close()
-        conn.close()
+        release_db_conn(conn)

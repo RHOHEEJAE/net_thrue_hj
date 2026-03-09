@@ -4,3 +4,5 @@ fastapi>=0.109.1
 uvicorn[standard]>=0.24.0
 # 2.9.x 최신으로 버그·호환성 수정 반영
 psycopg2-binary>=2.9.11
+# .env 파일 로드
+python-dotenv>=1.0.0
