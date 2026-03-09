@@ -1,8 +1,21 @@
 import os
 import psycopg2
 from psycopg2.pool import ThreadedConnectionPool
+from urllib.parse import urlparse, unquote
 
 _pool = None
+
+
+def _parse_db_url(url: str) -> dict:
+    """postgresql:// URI를 psycopg2 연결 파라미터 dict로 변환"""
+    parsed = urlparse(url)
+    return {
+        "host": parsed.hostname,
+        "port": parsed.port or 5432,
+        "dbname": parsed.path.lstrip("/"),
+        "user": unquote(parsed.username or ""),
+        "password": unquote(parsed.password or ""),
+    }
 
 
 def _get_pool():
@@ -12,8 +25,9 @@ def _get_pool():
 
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        # Supabase connection pooler URL (Transaction mode, port 6543)
-        _pool = ThreadedConnectionPool(minconn=1, maxconn=10, dsn=database_url)
+        # URI를 직접 파싱해 개별 파라미터로 전달 (psycopg2 URI 파싱 호환성 문제 우회)
+        params = _parse_db_url(database_url)
+        _pool = ThreadedConnectionPool(minconn=1, maxconn=10, **params)
     else:
         # 로컬 개발용 개별 파라미터
         _pool = ThreadedConnectionPool(
