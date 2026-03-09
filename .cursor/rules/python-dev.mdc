@@ -1,0 +1,47 @@
+---
+description: Python 개발 규칙 — FastAPI·repo·DB 패턴, 타입·스타일
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python 개발 규칙 (net_thrue_01)
+
+## 스타일
+- PEP 8 준수. 함수·공개 API에는 타입 힌트 사용 (`def fn(x: str) -> Optional[int]:`).
+- 모듈/클래스/공개 함수에는 한 줄 docstring (또는 """요약\n\n상세""").
+
+## DB 접근 (repo 계층)
+- 연결: `db.connect`의 `get_db_conn()` / `release_db_conn(conn)` 사용.
+- 패턴: `conn = get_db_conn()` → `try` 안에서 cursor 사용 → `finally`에서 `cur.close()`, `release_db_conn(conn)`.
+- SQL은 파라미터 바인딩만 사용 (`%s`, 인자 튜플). f-string/format으로 쿼리 조립 금지.
+
+## 환경 변수
+- `os.environ.get("KEY", "default")` 사용. 로컬/Vercel 구분은 주석으로만 표기 (예: Vercel에서는 환경변수 직접 주입).
+
+## FastAPI (app.py)
+- 라우트는 얇게 유지. 비즈니스/DB 로직은 `repo/`로 분리.
+- 인증 필요 라우트: `Depends(require_login)` 또는 `Depends(require_admin)`.
+- 에러 시 `HTTPException` 또는 `JSONResponse(content={"ok": False, "error": "..."}, status_code=4xx/5xx)`.
+
+## 예시
+
+```python
+# ✅ repo 함수
+def get_something(date_from: date, date_to: date) -> list:
+    """기간 내 조회."""
+    conn = get_db_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT id FROM t WHERE d >= %s AND d <= %s", (date_from, date_to))
+        return [r[0] for r in cur.fetchall()]
+    finally:
+        cur.close()
+        release_db_conn(conn)
+```
+
+```python
+# ❌ SQL 조립
+cur.execute(f"SELECT * FROM t WHERE id = {user_id}")  # 취약
+# ✅
+cur.execute("SELECT * FROM t WHERE id = %s", (user_id,))
+```

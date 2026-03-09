@@ -41,6 +41,8 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+# SDK 스크립트 URL 제공용 (서비스 시 각 사이트에서 <script src=".../sdk/ntm_29cm.js"> 로 로드)
+app.mount("/sdk", StaticFiles(directory="sdk"), name="sdk")
 
 # JWT 시크릿 — Vercel 환경변수 JWT_SECRET 에서 읽음 (없으면 고정값 사용)
 JWT_SECRET = os.environ.get("JWT_SECRET", "ntm_jwt_secret_change_me")

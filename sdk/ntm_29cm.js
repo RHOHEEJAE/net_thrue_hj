@@ -12,8 +12,8 @@
     window.__NTM_SDK_LOADED = true;
   }
 
-  const SETTINGS_API = "https://net-thrue-hj-od6m.vercel.app/settings/latest";
-  const COLLECT_URL = "https://net-thrue-hj-od6m.vercel.app/collect";
+  const SETTINGS_API = "https://net-thrue-hj.vercel.app/settings/latest";
+  const COLLECT_URL = "https://net-thrue-hj.vercel.app/collect";
   const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
   /** 29cm 전용: 설정의 channel 변수와 무관하게 항상 이 값으로 전송 */
   const CHANNEL = "twenty_nine_cm";
