@@ -15,6 +15,8 @@
   const SETTINGS_API = "https://net-thrue-hj-od6m.vercel.app/settings/latest";
   const COLLECT_URL = "https://net-thrue-hj-od6m.vercel.app/collect";
   const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
+  /** Rround 전용: 설정의 channel 변수와 무관하게 항상 이 값으로 전송 */
+  const CHANNEL = "Rround";
   /** 수집 전송에서 제외할 설정용 변수(대형 배열 등) — settings.variables에는 있으나 payload에는 넣지 않음 */
   const COLLECT_EXCLUDE_VARS = new Set(["AL_impression", "AL_popup", "AL_swipe", "AL_modules", "AL_likeBtn_arr", "FC_nthReplace"]);
 
@@ -301,6 +303,7 @@
         if (v !== undefined && typeof v !== "function") out[k] = v;
       });
     }
+    out.channel = CHANNEL;
     return out;
   }
 
@@ -313,6 +316,7 @@
       event_trigger: eventTrigger || lastFiredTriggerCode
     };
     if (base.referer_url === undefined && payload.referrer !== undefined) base.referer_url = payload.referrer;
+    base.channel = CHANNEL;
     produceEvent(base);
   }
 
@@ -413,7 +417,7 @@
     });
     const pageviewPayload = buildCollectPayload(
       {
-        channel: varValues.channel || "Rround",
+        channel: CHANNEL,
         page_id: varValues.page_id || "",
         act_type: "pageview",
         referer_url: varValues.referrer || ""
@@ -429,7 +433,7 @@
     const varValues = getMergedVariableValues({}, null);
     const payload = buildCollectPayload(
       {
-        channel: varValues.channel || "Rround",
+        channel: CHANNEL,
         page_id: varValues.page_id || "",
         act_type: "pageview",
         referer_url: varValues.referrer || ""
@@ -515,7 +519,7 @@
           lastFiredTriggerCode = triggerCode;
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: CHANNEL,
               page_id: varValues.page_id || "",
               act_type: "click",
               referer_url: varValues.referrer || "",
@@ -592,7 +596,7 @@
           const varValues = getMergedVariableValues({}, null);
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: CHANNEL,
               page_id: varValues.page_id || "",
               act_type: "scroll",
               referer_url: varValues.referrer || "",
@@ -659,7 +663,7 @@
             (eventName === "scroll" ? "scroll" : eventName === "pv" || eventName === "pvDetail" || eventName === "url_change" ? "pageview" : eventName === "impression" || eventName === "Scroll_Impression" ? "impression" : eventName === "enter" || eventName === "click_touch" ? "click" : "custom");
           const payload = buildCollectPayload(
             {
-              channel: varValues.channel || "Rround",
+              channel: CHANNEL,
               page_id: varValues.page_id || "",
               act_type: actType,
               referer_url: varValues.referrer || ""
