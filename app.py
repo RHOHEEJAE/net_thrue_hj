@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, JSONResponse
 from datetime import datetime, date, timedelta
 import os
-import secrets
+import jwt
 from typing import Optional
 from dotenv import load_dotenv
 
@@ -42,19 +42,38 @@ app.add_middleware(
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# 간단한 세션 저장소 (실제 운영 환경에서는 Redis 등을 사용 권장)
-sessions = {}
+# JWT 시크릿 — Vercel 환경변수 JWT_SECRET 에서 읽음 (없으면 고정값 사용)
+JWT_SECRET = os.environ.get("JWT_SECRET", "ntm_jwt_secret_change_me")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_HOURS = 24
 
 
-def get_session_token(request: Request) -> Optional[str]:
-    return request.cookies.get("session_token")
+def _create_jwt(username: str, role: str) -> str:
+    payload = {
+        "sub": username,
+        "role": role,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRE_HOURS),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+
+def _decode_jwt(token: str) -> Optional[dict]:
+    try:
+        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
 
 
 def get_session_user(request: Request) -> Optional[dict]:
-    token = get_session_token(request)
-    if token is None or token not in sessions:
+    token = request.cookies.get("session_token")
+    if not token:
         return None
-    return sessions.get(token)
+    payload = _decode_jwt(token)
+    if not payload:
+        return None
+    return {"username": payload["sub"], "role": payload.get("role", "user")}
 
 
 def check_login(request: Request) -> bool:
@@ -208,15 +227,10 @@ async def login(request: Request):
         if not ok:
             raise HTTPException(status_code=401, detail="아이디 또는 비밀번호가 올바르지 않습니다")
 
-        session_token = secrets.token_urlsafe(32)
-        sessions[session_token] = {
-            "username": username,
-            "role": role or "user",
-            "created_at": datetime.utcnow().isoformat()
-        }
+        token = _create_jwt(username, role or "user")
         redirect_url = "/static/dashboard.html" if (role or "user") == "user" else "/static/admin.html"
         response = JSONResponse(content={"success": True, "message": "로그인 성공", "role": role, "redirectUrl": redirect_url})
-        response.set_cookie(key="session_token", value=session_token, httponly=True, samesite="lax", max_age=86400)
+        response.set_cookie(key="session_token", value=token, httponly=True, samesite="lax", max_age=86400)
         print(f"[LOGIN] {username} 로그인 성공 (role={role})")
         return response
     except HTTPException:
@@ -227,10 +241,7 @@ async def login(request: Request):
 
 
 @app.post("/api/logout")
-async def logout(request: Request):
-    token = get_session_token(request)
-    if token and token in sessions:
-        del sessions[token]
+async def logout():
     response = JSONResponse(content={"success": True})
     response.delete_cookie(key="session_token")
     return response

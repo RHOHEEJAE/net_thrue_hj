@@ -12,8 +12,8 @@
     window.__NTM_SDK_LOADED = true;
   }
 
-  const SETTINGS_API = "http://localhost:8000/settings/latest";
-  const COLLECT_URL = "http://localhost:8000/collect";
+  const SETTINGS_API = "https://net-thrue-hj-od6m.vercel.app/settings/latest";
+  const COLLECT_URL = "https://net-thrue-hj-od6m.vercel.app/collect";
   const SETTINGS_REFRESH_MS = 5 * 60 * 1000;
   /** 수집 전송에서 제외할 설정용 변수(대형 배열 등) — settings.variables에는 있으나 payload에는 넣지 않음 */
   const COLLECT_EXCLUDE_VARS = new Set(["AL_impression", "AL_popup", "AL_swipe", "AL_modules", "AL_likeBtn_arr", "FC_nthReplace"]);
