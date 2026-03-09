@@ -230,7 +230,8 @@ async def login(request: Request):
         token = _create_jwt(username, role or "user")
         redirect_url = "/static/dashboard.html" if (role or "user") == "user" else "/static/admin.html"
         response = JSONResponse(content={"success": True, "message": "로그인 성공", "role": role, "redirectUrl": redirect_url})
-        response.set_cookie(key="session_token", value=token, httponly=True, samesite="lax", max_age=86400)
+        is_https = request.url.scheme == "https"
+        response.set_cookie(key="session_token", value=token, httponly=True, samesite="lax", max_age=86400, secure=is_https)
         print(f"[LOGIN] {username} 로그인 성공 (role={role})")
         return response
     except HTTPException:
